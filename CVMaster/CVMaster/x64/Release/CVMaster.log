@@ -1,0 +1,22 @@
+﻿  hough_linefinder.cpp
+C:\Dev\Repos\FastCV\CVMaster\CVMaster\hough_linefinder.cpp(133,51): warning C4244: 'argument': conversion from 'int' to '_Tp', possible loss of data
+          with
+          [
+              _Tp=float
+          ]
+C:\Dev\Repos\FastCV\CVMaster\CVMaster\hough_linefinder.cpp(133,40): warning C4244: 'argument': conversion from 'int' to '_Tp', possible loss of data
+          with
+          [
+              _Tp=float
+          ]
+C:\Dev\Repos\FastCV\CVMaster\CVMaster\hough_linefinder.cpp(153,27): warning C4244: 'initializing': conversion from 'float32_t' to 'int32_t', possible loss of data
+C:\Dev\Repos\FastCV\CVMaster\CVMaster\hough_linefinder.cpp(153,21): warning C4244: 'initializing': conversion from 'float32_t' to 'const int32_t', possible loss of data
+C:\Dev\Repos\FastCV\CVMaster\CVMaster\hough_linefinder.cpp(154,58): warning C4244: 'initializing': conversion from 'float32_t' to 'int32_t', possible loss of data
+C:\Dev\Repos\FastCV\CVMaster\CVMaster\hough_linefinder.cpp(154,21): warning C4244: 'initializing': conversion from 'float32_t' to 'const int32_t', possible loss of data
+C:\Dev\Repos\FastCV\CVMaster\CVMaster\hough_linefinder.cpp(178,21): warning C4267: 'return': conversion from 'size_t' to 'uint32_t', possible loss of data
+  Generating code
+  23 of 439 functions ( 5.2%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    19 functions had inline decision re-evaluated but remain unchanged
+  Finished generating code
+  CVMaster.vcxproj -> C:\Dev\Repos\FastCV\CVMaster\x64\Release\CVMaster.exe
