@@ -26,7 +26,7 @@ uint32_t CheckerboardFinder::detectBoards(cv::Mat& image, const std::vector<Feat
 
     std::vector<cv::Vec2f> lines = {};
 
-    const uint32_t lineCount = hougher.findLines(image, features, lines);
+    const uint32_t lineCount = hougher.findLines(image, features, lines, 0);
 
     return 0;
 }

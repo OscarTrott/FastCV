@@ -12,8 +12,12 @@
 /**
  *  @details Do nothing
  */
-HoughTransform::HoughTransform()
+HoughTransform::HoughTransform() : 
+	xBinOffset(),
+	pi(2.0F * acosf(0.0F)),
+	thetaResolution_rad(0.0F)
 {
+	// Do nothing
 }
 
 /**
@@ -21,98 +25,120 @@ HoughTransform::HoughTransform()
  */
 HoughTransform::~HoughTransform()
 {
+	// Do nothing
+}
+
+bool HoughTransform::xyToPolar(const uint32_t x, const uint32_t y, const float32_t theta_rad, float32_t& phi)
+{
+	// Compute the phi and theta values for this xy position
+	// r = x cos(t) + y sin(t)
+	const float32_t ct = cos(theta_rad);
+	const float32_t st = sin(theta_rad);
+
+	phi = x * ct + y * st;
+
+	return true;
+}
+
+bool HoughTransform::polarToXY(const float32_t theta_rad, const float32_t phi, float32_t& m, float32_t& y)
+{
+	// r = x cos(t) + y sin(t)
+
+	return true;
+}
+
+void HoughTransform::plotLine(cv::Mat& image, const float32_t theta_rad, const float32_t phi)
+{
+	cv::Point p1; // y = 0, clipped by 
+	cv::Point p2; // y = height
+
+	const float32_t ct = cosf(theta_rad);
+	const float32_t st = sinf(theta_rad);
+
+	if (ct == 0.0F)
+	{
+		p1.x = 0;
+		p1.y = phi;
+		p2.x = image.size().width;
+		p2.y = phi;
+	}
+	else
+	{
+		p1.x = phi / ct;
+		p2.x = (phi - image.size().height * st) / ct;
+		p1.y = 0;
+		p2.y = image.size().height;
+	}
+
+	cv::line(image, p1, p2, cv::Scalar(0, 0, 255));
 }
 
 /**
  *  
  */
-uint32_t HoughTransform::findLines(cv::Mat& image, const std::vector<Feature>& features, std::vector<cv::Vec2f>& lines, const float32_t edgeIntensityThreshold, const float32_t thetaResolution, const float32_t phiResolution)
+uint32_t HoughTransform::findLines(cv::Mat& image, 
+	const std::vector<Feature>& features, 
+	std::vector<cv::Vec2f>& lines, 
+	const float32_t edgeIntensityThreshold, 
+	const float32_t thetaResolution, 
+	const float32_t phiResolution)
 {
-	assert(thetaResolution > 0.0F);
+	assert(thetaResolution > 0.0F); // Should always be greater than 0, otherwise infinite looping would occurr
 
-	const uint32_t winBorder = 5; // Pixels
+	const uint32_t winBorder = 5; // Account for border as gradient intensities are unreliable
 
-	cv::String windowName = "rendered image"; //Name of the window
-	cv::namedWindow(windowName); // Create a window
-
-	cv::Mat rendering = cv::Mat();
-
-	cv::String window2Name = "Vision output"; //Name of the window
-	cv::namedWindow(window2Name); // Create a window
-
-	const float32_t pi = 2 * acos(0.0F);
-	const float32_t thetaResolution_rad = thetaResolution * pi / 180.0F;
+	thetaResolution_rad = thetaResolution * pi / 180.0F;
 
 	const cv::Size& imSize = image.size();
 
+	// Compute bin array size
 	const float32_t binsPerDeg = std::ceil(1.0F / thetaResolution);
 	const float32_t binsPerRad = std::ceil(1.0F / thetaResolution_rad);
 
-	const uint32_t maxBinsPhi = std::max(imSize.width, imSize.height);
-	const uint32_t binsTheta = static_cast<uint32_t>(std::ceil(binsPerRad * 2 * pi)) + 1U;
+	// Maximal phi distance of a line would be at image edge as far from origin (0,0) as possible, which would be diagonal to opposing corner
+	const uint32_t maxBinsPhi = static_cast<uint32_t>(std::ceil(phiResolution * std::sqrt(std::pow(imSize.width, 2) + std::pow(imSize.height, 2))));
+	const uint32_t binsTheta = static_cast<uint32_t>(std::ceil(binsPerRad * 2.0F * pi)) + 1U;
 
-	mBins = cv::Mat(cv::Size(maxBinsPhi * 4 + 2, binsTheta), CV_16UC1);
+	// Define bin array
+	mBins = cv::Mat(cv::Size(maxBinsPhi * 2 + 1, binsTheta), CV_16UC1);
+	mBins = cv::Scalar();
 
+	// Temp point to avoid allocating and deallocating memory constantly
 	cv::Point tempPoint(0, 0);
-	const cv::Size winSize = cv::Size(9, 9);
 
+	// Iterate through features
 	for (uint32_t featIdx = 0U; featIdx < 1; featIdx++)
 	{
+		// Iterate over window around the feature
+		//for (uint32_t dy = winBorder; dy < imSize.height - winBorder; dy++)
 		for (uint32_t dy = winBorder; dy < imSize.height - winBorder; dy++)
 		{
 			for (uint32_t dx = winBorder; dx < imSize.width - winBorder; dx++)
 			{
+				//const Feature& feat = features[featIdx];
+
 				const int32_t x = dx;
 				const int32_t y = dy;
 
 				const float32_t contourVal = image.at<uint8_t>(y, x);
 
-				//std::cout << contourVal << std::endl;
-
+				// Check for borders of image, and that intensity is above threshold
 				if (x >= 0 && y >= 0 && x < imSize.width && imSize.height && contourVal > edgeIntensityThreshold)
 				{
-					for (float32_t currAngle_rad = 0.0F; currAngle_rad < 2.0F * pi; currAngle_rad += thetaResolution_rad)
+					// Only iterate over half the angles possible
+					for (float32_t currAngle_rad = 0.0F; currAngle_rad < pi; currAngle_rad += thetaResolution_rad)
 					{
-						// Compute the phi and theta values for this xy position
-						// r = x cos(t) + y sin(t)
-						const float32_t ct = cos(currAngle_rad);
-						const float32_t st = sin(currAngle_rad);
+						assert(currAngle_rad < 2 * pi);
 
-						const float32_t phi = x * ct + y * st;
+						float32_t phi = 0.0F;
+						xyToPolar(x, y, currAngle_rad, phi);
 
-						tempPoint.x = static_cast<uint32_t>(std::roundf(phi + maxBinsPhi * 2.0F));
+						tempPoint.x = static_cast<uint32_t>(std::roundf(phiResolution * phi + maxBinsPhi));
 						tempPoint.y = static_cast<uint32_t>(std::roundf(binsPerRad * currAngle_rad));
 
  						mBins.at<uint16_t>(tempPoint) += 1;
-						/*
-						// r = x cos(t) + y sin(t)
-						const int32_t xl1 = phi / ct;
-						const int32_t xl2 = (phi - imSize.height * st) / ct;
-						const int32_t yl1 = 0;
-						const int32_t yl2 = imSize.height;
 
-						cv::Mat outputImg;
-
-						image.convertTo(outputImg, CV_8UC4);
-
-						cv::cvtColor(outputImg, outputImg, cv::COLOR_GRAY2BGR);
-
-						cv::line(outputImg, cv::Point(xl1, yl1), cv::Point(xl2, yl2), cv::Scalar(0, 0, 255));
-						cv::imshow(window2Name, outputImg);
-						// r = x cos(t) + y sin(t)
-						         
-						mBins.convertTo(rendering, CV_8UC1);
-						cv::normalize(rendering, rendering, 0, 255, cv::NORM_MINMAX, CV_8UC1, cv::Mat());
-
-						cv::imshow(windowName, rendering); // Show our image inside the created window.
-
-						cv::waitKey(0); // Wait for any keystroke in the window
-						
-						std::cout << "Current angle: " << 180 * currAngle_rad / pi << std::endl;
-						std::cout << "Current phi: " << phi << std::endl;
-						std::cout << "Current x: " << tempPoint.x << std::endl;
-						std::cout << "Current y: " << tempPoint.y << std::endl;
-						*/
+						//disp.showImg(mBins, "Bin image");
 					}
 				}
 			}
@@ -127,7 +153,7 @@ uint32_t HoughTransform::findLines(cv::Mat& image, const std::vector<Feature>& f
 	cv::minMaxIdx(mBins, nullptr, &maxIntensity, nullptr, &maxLoc[0]);
 
 	const uint32_t threshold = 10;
-
+	disp.showImg(mBins, "Bin image");
 	while (maxIntensity > threshold)
 	{
 		cv::Vec2f vector = cv::Vec2f(maxLoc[0], maxLoc[1]);
@@ -137,43 +163,23 @@ uint32_t HoughTransform::findLines(cv::Mat& image, const std::vector<Feature>& f
 		tempPoint.x = maxLoc[1];
 		tempPoint.y = maxLoc[0];
 
-		const float32_t phi = maxLoc[1] - maxBinsPhi * 2.0F;
-
 		cv::circle(mBins, tempPoint, 5, 0, -1);
+		disp.showImg(mBins, "Bin image");
+
+		const float32_t phi = (static_cast<int32_t>(maxLoc[1]) - static_cast<int32_t>(maxBinsPhi)) / phiResolution;
+		const float32_t theta_rad = maxLoc[0] / binsPerRad;
+
+		/*std::cout << "Current angle: " << 180 * theta_rad / pi << std::endl;
+		std::cout << "Current phi: " << phi << std::endl;*/
+
+       		cv::Mat lineImg = image.clone();
+		cv::cvtColor(lineImg, lineImg, cv::COLOR_GRAY2BGR);
+		lineImg.convertTo(lineImg, CV_8UC3);
+		plotLine(lineImg, theta_rad, phi);
+		disp.showImg(lineImg, "line image");
 
 		cv::minMaxIdx(mBins, nullptr, &maxIntensity, nullptr, &maxLoc[0]);
-
-		cv::normalize(mBins, mBins, 0, 255, cv::NORM_MINMAX, CV_32FC1, cv::Mat());
-
-		mBins.convertTo(rendering, CV_8UC1);
-		cv::imshow(windowName, rendering); // Show our image inside the created window.
-		
-		// r = x cos(t) + y sin(t)
-		const float32_t theta = maxLoc[0] / binsPerRad;
-		const int32_t xl1 = phi / cos(theta);
-		const int32_t xl2 = (phi - imSize.height * sin(theta)) / cos(theta);
-		const int32_t yl1 = 0;
-		const int32_t yl2 = imSize.height;
-
-
-		std::cout << "Current angle: " << 180 * theta / pi << std::endl;
-		std::cout << "Current phi: " << phi << std::endl;
-		std::cout << "Current x: " << tempPoint.x << std::endl;
-		std::cout << "Current y: " << tempPoint.y << std::endl;
-
-		cv::Mat outputImg;
-
-		image.convertTo(outputImg, CV_8UC4);
-
-		cv::cvtColor(outputImg, outputImg, cv::COLOR_GRAY2BGR);
-
-		cv::line(outputImg, cv::Point(xl1, yl1), cv::Point(xl2, yl2), cv::Scalar(0,0,255));
-		cv::imshow(window2Name, outputImg);
-		// r = x cos(t) + y sin(t)
-
-		cv::waitKey(0); // Wait for any keystroke in the window
 	}
-
 
 	return lines.size();
 }

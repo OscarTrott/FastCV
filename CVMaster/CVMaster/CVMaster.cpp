@@ -24,13 +24,16 @@ void cornerHarris_demo(int, void*);
 
 int main(int argc, char** argv)
 {
-    // Test hoiugh line detector
+    // Test hough line detector
 
     HoughTransform lineFinder = HoughTransform();
 
     cv::Mat lineImage = cv::Mat(400, 400, CV_8UC1);
+    lineImage = cv::Scalar(0, 0, 0);
 
     cv::line(lineImage, cv::Point(150, 100), cv::Point(350, 250), cv::Scalar(255, 255, 255));
+    cv::line(lineImage, cv::Point(300, 100), cv::Point(100, 250), cv::Scalar(255, 255, 255));
+    cv::line(lineImage, cv::Point(100, 100), cv::Point(400, 100), cv::Scalar(255, 255, 255));
     cv::String lineWindowName = "Vision output"; //Name of the window
 
     namedWindow(lineWindowName); // Create a window
@@ -41,7 +44,7 @@ int main(int argc, char** argv)
 
     std::vector<cv::Vec2f> lines = {};
 
-    lineFinder.findLines(lineImage, FeatureList(), lines);
+    lineFinder.findLines(lineImage, FeatureList(), lines, 50.0F, 0.5F, 2.0F);
 
     return 0;
     // ------------------------------------------------------

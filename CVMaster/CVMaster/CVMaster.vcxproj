@@ -153,6 +153,7 @@
   <ItemGroup>
     <ClCompile Include="checkerboarddetector.cpp" />
     <ClCompile Include="CVMaster.cpp" />
+    <ClCompile Include="display.cpp" />
     <ClCompile Include="feature_renderer.cpp" />
     <ClCompile Include="harriscorner_featuredetector.cpp" />
     <ClCompile Include="hough_linefinder.cpp" />
@@ -162,6 +163,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\checkerboarddetector.h" />
+    <ClInclude Include="include\display.h" />
     <ClInclude Include="include\feature.h" />
     <ClInclude Include="include\feature_renderer.h" />
     <ClInclude Include="include\harriscorner_featuredetector.h" />
