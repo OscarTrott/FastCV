@@ -26,6 +26,8 @@ public:
 	 */
 	~CheckerboardFinder();
 
+	void clusterLines(std::vector<int8_t>& lineCluster, const std::vector<cv::Vec2f>& line);
+
 	/**
 	 *	@brief Finds checkerboard patterns within a given image
 	 *
@@ -46,5 +48,7 @@ private:
 		unprocessed = -2,
 		noBoard = -1
 	};
+
+	cv::Size imSize;
 };
 

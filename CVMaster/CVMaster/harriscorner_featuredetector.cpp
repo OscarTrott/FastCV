@@ -83,7 +83,7 @@ bool HarrisFeatureDetector::processFeatures(const cv::Mat& img, cv::Mat& contour
     // Choose local maxima within a window
 
     const cv::Size& imgSize = harrisResponse.size();
-    const uint32_t harrisThreshold = 4;
+    const uint32_t harrisThreshold = 6;
 
     harrisResponse.convertTo(harrisResponse, CV_8UC1);
     harrisResponse.convertTo(interimImg, CV_32FC1);
@@ -92,9 +92,9 @@ bool HarrisFeatureDetector::processFeatures(const cv::Mat& img, cv::Mat& contour
 
     cv::Point point = cv::Point(0, 0);
 
-    cv::namedWindow(currDataWindowName); // Create a window
-    cv::imshow(currDataWindowName, harrisResponse); // Show our image inside the created window.
-    cv::waitKey(0); // Wait for any keystroke in the window
+    //cv::namedWindow(currDataWindowName); // Create a window
+    //cv::imshow(currDataWindowName, harrisResponse); // Show our image inside the created window.
+    //cv::waitKey(0); // Wait for any keystroke in the window
 
     for (int y = 0; y < imgSize.height; y += 2)
     {

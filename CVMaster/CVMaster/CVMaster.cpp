@@ -24,31 +24,6 @@ void cornerHarris_demo(int, void*);
 
 int main(int argc, char** argv)
 {
-    // Test hough line detector
-
-    HoughTransform lineFinder = HoughTransform();
-
-    cv::Mat lineImage = cv::Mat(400, 400, CV_8UC1);
-    lineImage = cv::Scalar(0, 0, 0);
-
-    cv::line(lineImage, cv::Point(150, 100), cv::Point(350, 250), cv::Scalar(255, 255, 255));
-    cv::line(lineImage, cv::Point(300, 100), cv::Point(100, 250), cv::Scalar(255, 255, 255));
-    cv::line(lineImage, cv::Point(100, 100), cv::Point(400, 100), cv::Scalar(255, 255, 255));
-    cv::String lineWindowName = "Vision output"; //Name of the window
-
-    namedWindow(lineWindowName); // Create a window
-
-    imshow(lineWindowName, lineImage); // Show our image inside the created window.
-
-    waitKey(0); // Wait for any keystroke in the window
-
-    std::vector<cv::Vec2f> lines = {};
-
-    lineFinder.findLines(lineImage, FeatureList(), lines, 50.0F, 0.5F, 2.0F);
-
-    return 0;
-    // ------------------------------------------------------
-
     // Read the image file
     const Mat image = imread("C:/Dev/Data/Images/Calibration/Tellak/6.png");
 
@@ -70,7 +45,7 @@ int main(int argc, char** argv)
     */
     Mat greyImage = Mat(image.size(), CV_8UC1);
     cv::cvtColor(image, greyImage, COLOR_RGB2GRAY);
-    resize(greyImage, greyImage, Size(640, 480));//Size(1296, 968));
+    resize(greyImage, greyImage, Size(1296, 968));//Size(640, 480));//
 
     cv::String windowName = "Vision output"; //Name of the window
 
@@ -102,7 +77,7 @@ int main(int argc, char** argv)
 
     destroyWindow(windowName); //destroy the created window
 
-    checkerboardFinder.detectBoards(greyImage, features, lineIdx);
+    checkerboardFinder.detectBoards(contours, features, lineIdx);
 
     return 0;
 }

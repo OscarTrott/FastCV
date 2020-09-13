@@ -40,13 +40,6 @@ bool HoughTransform::xyToPolar(const uint32_t x, const uint32_t y, const float32
 	return true;
 }
 
-bool HoughTransform::polarToXY(const float32_t theta_rad, const float32_t phi, float32_t& m, float32_t& y)
-{
-	// r = x cos(t) + y sin(t)
-
-	return true;
-}
-
 void HoughTransform::plotLine(cv::Mat& image, const float32_t theta_rad, const float32_t phi)
 {
 	cv::Point p1; // y = 0, clipped by 
@@ -70,7 +63,24 @@ void HoughTransform::plotLine(cv::Mat& image, const float32_t theta_rad, const f
 		p2.y = image.size().height;
 	}
 
+	cv::Point p3;
+	cv::Point p4;
+
+	p4.x = phi * ct;
+	p4.y = phi * st;
+
 	cv::line(image, p1, p2, cv::Scalar(0, 0, 255));
+	cv::line(image, p3, p4 , cv::Scalar(0, 255, 0));
+}
+
+void HoughTransform::polarToTangent(float32_t& x, float32_t& y , const float32_t theta_rad, const float32_t phi)
+{
+
+	const float32_t ct = cosf(theta_rad);
+	const float32_t st = sinf(theta_rad);
+
+	x = phi * ct;
+	y = phi * st;
 }
 
 /**
@@ -106,24 +116,25 @@ uint32_t HoughTransform::findLines(cv::Mat& image,
 	// Temp point to avoid allocating and deallocating memory constantly
 	cv::Point tempPoint(0, 0);
 
+	const int32_t winRadius_pix = 1;
+
 	// Iterate through features
-	for (uint32_t featIdx = 0U; featIdx < 1; featIdx++)
+	for (uint32_t featIdx = 0U; featIdx < features.size(); featIdx++)
 	{
 		// Iterate over window around the feature
 		//for (uint32_t dy = winBorder; dy < imSize.height - winBorder; dy++)
-		for (uint32_t dy = winBorder; dy < imSize.height - winBorder; dy++)
+		for (int32_t dy = -winRadius_pix; dy < winRadius_pix + 1; dy++)
 		{
-			for (uint32_t dx = winBorder; dx < imSize.width - winBorder; dx++)
+			for (int32_t dx = -winRadius_pix; dx < winRadius_pix + 1; dx++)
 			{
-				//const Feature& feat = features[featIdx];
+				const int32_t x = features[featIdx].x + dx;
+				const int32_t y = features[featIdx].y + dy;
 
-				const int32_t x = dx;
-				const int32_t y = dy;
-
-				const float32_t contourVal = image.at<uint8_t>(y, x);
+				const float32_t contourVal = image.at<float32_t>(y, x); // For contours
+				//const float32_t contourVal = image.at<float32_t>(y, x); // For 8-bit greyscale images
 
 				// Check for borders of image, and that intensity is above threshold
-				if (x >= 0 && y >= 0 && x < imSize.width && imSize.height && contourVal > edgeIntensityThreshold)
+				if (x >= winBorder && y >= winBorder && x < imSize.width - winBorder && imSize.height - winBorder && contourVal > edgeIntensityThreshold)
 				{
 					// Only iterate over half the angles possible
 					for (float32_t currAngle_rad = 0.0F; currAngle_rad < pi; currAngle_rad += thetaResolution_rad)
@@ -137,8 +148,6 @@ uint32_t HoughTransform::findLines(cv::Mat& image,
 						tempPoint.y = static_cast<uint32_t>(std::roundf(binsPerRad * currAngle_rad));
 
  						mBins.at<uint16_t>(tempPoint) += 1;
-
-						//disp.showImg(mBins, "Bin image");
 					}
 				}
 			}
@@ -146,40 +155,40 @@ uint32_t HoughTransform::findLines(cv::Mat& image,
 	}
 
 	// Render the output
-
 	int maxLoc[2] = { 0, 0 };
 	float64_t maxIntensity = 0;
 	
 	cv::minMaxIdx(mBins, nullptr, &maxIntensity, nullptr, &maxLoc[0]);
 
-	const uint32_t threshold = 10;
-	disp.showImg(mBins, "Bin image");
+	const uint32_t threshold = 8;
+	//disp.showImg(mBins, "Bin image");
+
+	cv::Mat lineImg = image.clone();
+	cv::cvtColor(lineImg, lineImg, cv::COLOR_GRAY2BGR);
+	lineImg.convertTo(lineImg, CV_8UC3);
+
 	while (maxIntensity > threshold)
 	{
 		cv::Vec2f vector = cv::Vec2f(maxLoc[0], maxLoc[1]);
 
-		lines.push_back(vector);
-
 		tempPoint.x = maxLoc[1];
 		tempPoint.y = maxLoc[0];
 
-		cv::circle(mBins, tempPoint, 5, 0, -1);
-		disp.showImg(mBins, "Bin image");
+		// Remove from bins
+		cv::circle(mBins, tempPoint, 10, 0, -1);
 
 		const float32_t phi = (static_cast<int32_t>(maxLoc[1]) - static_cast<int32_t>(maxBinsPhi)) / phiResolution;
 		const float32_t theta_rad = maxLoc[0] / binsPerRad;
 
-		/*std::cout << "Current angle: " << 180 * theta_rad / pi << std::endl;
-		std::cout << "Current phi: " << phi << std::endl;*/
+		polarToTangent(vector[0], vector[1], theta_rad, phi);
+		lines.push_back(vector);
 
-       		cv::Mat lineImg = image.clone();
-		cv::cvtColor(lineImg, lineImg, cv::COLOR_GRAY2BGR);
-		lineImg.convertTo(lineImg, CV_8UC3);
 		plotLine(lineImg, theta_rad, phi);
-		disp.showImg(lineImg, "line image");
 
 		cv::minMaxIdx(mBins, nullptr, &maxIntensity, nullptr, &maxLoc[0]);
 	}
+
+	disp.showImg(lineImg, "line image");
 
 	return lines.size();
 }

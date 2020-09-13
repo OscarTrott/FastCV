@@ -31,21 +31,20 @@ public:
 	 */
 	~HoughTransform();
 
-
 	uint32_t findLines(cv::Mat& image,
 		const std::vector<Feature>& features, 
 		std::vector<cv::Vec2f>& lines, 
 		const float32_t edgeIntensityThreshold = 50.0F, 
-		const float32_t thetaResolution = 2.0F, 
-		const float32_t phiResolution = 1.0F);
+		const float32_t thetaResolution = 0.5F, 
+		const float32_t phiResolution = 4.0F);
+
+	void plotLine(cv::Mat& image, const float32_t theta, const float32_t phi);
 
 private:
 
 	bool xyToPolar(const uint32_t x, const uint32_t y, const float32_t theta_rad, float32_t& phi);
 
-	bool polarToXY(const float32_t theta_rad, const float32_t phi, float32_t& m, float32_t& y);
-
-	void plotLine(cv::Mat& image, const float32_t theta, const float32_t phi);
+	void polarToTangent(float32_t& x, float32_t& y, const float32_t theta_rad, const float32_t phi);
 
 	cv::Mat mBins;
 
