@@ -28,6 +28,8 @@ public:
 
 	void clusterLines(std::vector<int8_t>& lineCluster, const std::vector<cv::Vec2f>& line);
 
+	void computeFeatureLineDistance(std::vector<float32_t>& distances, const std::vector<Feature>& features, const cv::Vec2f& lineNormal);
+
 	/**
 	 *	@brief Finds checkerboard patterns within a given image
 	 *

@@ -160,8 +160,8 @@ uint32_t HoughTransform::findLines(cv::Mat& image,
 	
 	cv::minMaxIdx(mBins, nullptr, &maxIntensity, nullptr, &maxLoc[0]);
 
-	const uint32_t threshold = 8;
-	//disp.showImg(mBins, "Bin image");
+	const uint32_t threshold = 9;
+	disp.showImg(mBins, "Bin image");
 
 	cv::Mat lineImg = image.clone();
 	cv::cvtColor(lineImg, lineImg, cv::COLOR_GRAY2BGR);
@@ -175,7 +175,7 @@ uint32_t HoughTransform::findLines(cv::Mat& image,
 		tempPoint.y = maxLoc[0];
 
 		// Remove from bins
-		cv::circle(mBins, tempPoint, 10, 0, -1);
+		cv::circle(mBins, tempPoint, 30, 0, -1);
 
 		const float32_t phi = (static_cast<int32_t>(maxLoc[1]) - static_cast<int32_t>(maxBinsPhi)) / phiResolution;
 		const float32_t theta_rad = maxLoc[0] / binsPerRad;
