@@ -19,16 +19,21 @@
  *  @brief Class to hold a single feature
  */
 struct Feature {
-    uint32_t x;
-    uint32_t y;
+    
+    // Image coordinates, generally will be whole numbers, but sub-pixel accuracy may be possible
+    float32_t x;
+    float32_t y;
 
     int64_t descriptor;
 
-    Feature(const uint32_t x_, const uint32_t y_, const int64_t descriptor_ = 0)
+    Feature() : x(0U), y(0U), descriptor()
     {
-        x = x_;
-        y = y_;
-        descriptor = descriptor_;
+        // Do nothing
+    }
+
+    Feature(const uint32_t x_, const uint32_t y_, const int64_t descriptor_ = 0) : x(x_), y(y_), descriptor(descriptor_)
+    {
+        // Do nothing
     }
 };
 

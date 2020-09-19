@@ -10,6 +10,7 @@
 #include "feature.h"
 #include "hough_linefinder.h"
 #include "opencv2/opencv.hpp"
+#include "checkerboard.h"
 
 #pragma once
 
@@ -39,7 +40,7 @@ public:
 	 *
 	 *	@return An integer representing the number of boards found within the image
 	 */
-	uint32_t detectBoards(cv::Mat& image, const std::vector<Feature>& features, std::vector<int32_t>& boardIdx);
+	uint32_t detectBoards(cv::Mat& image, const std::vector<Feature>& features, std::vector<Checkerboard>& boardIdx);
 
 private:
 	/**

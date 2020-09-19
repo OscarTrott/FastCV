@@ -69,7 +69,7 @@ int main(int argc, char** argv)
     featureDetector.getFeatures(features);
     featureRenderer.processImage(greyImage, features);
 
-    std::vector<int32_t> lineIdx = {};
+    std::vector<Checkerboard> checkerboards = {};
 
     imshow(windowName, greyImage); // Show our image inside the created window.
 
@@ -77,7 +77,7 @@ int main(int argc, char** argv)
 
     destroyWindow(windowName); //destroy the created window
 
-    checkerboardFinder.detectBoards(contours, features, lineIdx);
+    checkerboardFinder.detectBoards(contours, features, checkerboards);
 
     return 0;
 }

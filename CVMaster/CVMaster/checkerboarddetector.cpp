@@ -49,14 +49,14 @@ void CheckerboardFinder::computeFeatureLineDistance(std::vector<float32_t>& dist
     }
 }
 
-uint32_t CheckerboardFinder::detectBoards(cv::Mat& image, const std::vector<Feature>& features, std::vector<int32_t>& boardIdx)
+uint32_t CheckerboardFinder::detectBoards(cv::Mat& image, const std::vector<Feature>& features, std::vector<Checkerboard>& boardIdx)
 {
     imSize = image.size();
 
     const uint32_t cFeatureCount = features.size();
 
     // Initialise the board indices to -2 indicating that they haven't been processed yet
-    boardIdx = std::vector<int32_t>(cFeatureCount, featureState::unprocessed);
+    std::vector<int32_t> featureState = std::vector<int32_t>(cFeatureCount, featureState::unprocessed);
 
     HoughTransform hougher = HoughTransform();
 
@@ -64,12 +64,6 @@ uint32_t CheckerboardFinder::detectBoards(cv::Mat& image, const std::vector<Feat
     std::vector<std::vector<uint8_t>> lineFeatures;
 
     const uint32_t lineCount = hougher.findLines(image, features, lines, 200.0F);
-
-    const int16_t INVALIDCLUSTERINDEX = -1;
-
-    std::vector<int8_t> lineClusterIdx = std::vector<int8_t>(lines.size(), INVALIDCLUSTERINDEX);
-
-    //clusterLines(lineClusterIdx, lines);
 
     std::vector<float32_t> distances = std::vector<float32_t>(features.size(), -1.0);
 
@@ -101,8 +95,14 @@ uint32_t CheckerboardFinder::detectBoards(cv::Mat& image, const std::vector<Feat
     const float32_t maxPixelDelta = 10.0F;
     const uint16_t minConsecutiveCheckerboardFeatures = 4U;
 
+
+    // Find the checkerboard index of each feature, if it exists on one
     for (uint16_t featIdx = 0U; featIdx < cFeatureCount; featIdx++)
     {
+        // Feature has already been processed
+        if (featureState[featIdx] == featureState::unprocessed)
+            continue;
+
         // Pick a feature
         const std::vector<uint16_t>& lineIndexList = featLineAssociation[featIdx];
 
@@ -134,6 +134,7 @@ uint32_t CheckerboardFinder::detectBoards(cv::Mat& image, const std::vector<Feat
 
             float32_t modeDist = 0.0F;
 
+            // Compute the inter-feature distance along the line
             std::vector<float32_t> orderedModeDistances;
             std::vector<uint16_t> orderedModeDistancesCount;
 
@@ -164,31 +165,46 @@ uint32_t CheckerboardFinder::detectBoards(cv::Mat& image, const std::vector<Feat
                 }
             }
 
-            std::vector<uint16_t> orderedModeFeatures;
+            // Determine the plausability of a sequence of features are part of a checkerboard
+            std::vector<std::vector<uint16_t>> possibleCheckerboards;
 
             for (uint16_t i = 0U; i < orderedModeDistancesCount.size(); i++)
             {
                 // A possible line of features along checkerboard
                 if (orderedModeDistancesCount[i] > minConsecutiveCheckerboardFeatures)
                 {
-                    bool last = false;
+                    std::vector<uint16_t> tempVec = std::vector<uint16_t>();
+
+                    uint16_t sequentialCount = 0U;
 
                     // Find features which fit the spacing criteria
                     for (uint16_t j = 0U; j < distances.size(); j++)
                     {
                         if (abs(distances[i] - orderedModeDistancesCount[modeIdx]) < maxPixelDelta)
                         {
-                            orderedModeFeatures.push_back(lineFeatures[i]);
-                            last = true;
+                            tempVec.push_back(lineFeatures[i]);
+                            sequentialCount++;
                         }
-                        else if (last)
+                        // If there has been at least one value so far
+                        else if (sequentialCount > 0U)
                         {
-                            last = false;
-                            orderedModeFeatures.push_back(lineFeatures[i]);
+                            // Push back the last value and reset the counter
+                            sequentialCount = 0U;
+                            tempVec.push_back(lineFeatures[i]);
+
+                            if (sequentialCount > minConsecutiveCheckerboardFeatures)
+                                // Add the list to the list of possible vectors
+                                possibleCheckerboards.push_back(tempVec);
+
+                            // Reset the vector
+                            tempVec = std::vector<uint16_t>();
                         }
                     }
                 }
             }
+
+            // We now have a list of possible checkerboard features
+            // We need to traverse the graph created by them and add them to a checkerboard
         }
 
         if (isCheckerboard)
