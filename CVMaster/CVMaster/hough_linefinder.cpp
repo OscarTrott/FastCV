@@ -183,7 +183,7 @@ uint32_t HoughTransform::findLines(cv::Mat& image,
 		polarToTangent(vector[0], vector[1], theta_rad, phi);
 		lines.push_back(vector);
 
-		plotLine(lineImg, theta_rad, phi);
+		//plotLine(lineImg, theta_rad, phi);
 
 		cv::minMaxIdx(mBins, nullptr, &maxIntensity, nullptr, &maxLoc[0]);
 	}

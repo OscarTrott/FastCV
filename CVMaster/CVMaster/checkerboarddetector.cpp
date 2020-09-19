@@ -49,6 +49,54 @@ void CheckerboardFinder::computeFeatureLineDistance(std::vector<float32_t>& dist
     }
 }
 
+float32_t CheckerboardFinder::featureDistance(const Feature f1, const Feature& f2)
+{
+    return sqrtf(powf(f1.x  - f2.x, 2.0F) + powf(f1.y - f2.y, 2.0F));
+}
+
+void CheckerboardFinder::computeLineFeatureDistances(std::vector<float32_t>& distances, const std::vector<uint16_t>& lineFeatures, const std::vector<Feature>& features)
+{
+    // Feature order should already be in ascending y
+    for (uint16_t lineFeatIdx = 0U; lineFeatIdx < lineFeatures.size() - 1U; lineFeatIdx++)
+    {
+        float32_t dist = sqrt(pow(features[lineFeatures[lineFeatIdx]].x - features[lineFeatures[lineFeatIdx + 1]].x, 2) + pow(features[lineFeatures[lineFeatIdx]].y - features[lineFeatures[lineFeatIdx + 1]].y, 2));
+
+        distances.push_back(dist);
+    }
+}
+
+void CheckerboardFinder::computeModeFeatureDistances(std::vector<float32_t>& orderedModeDistances, std::vector<uint16_t>& orderedModeDistancesCount, const std::vector<float32_t> distances, const float32_t maxPixelDelta)
+{
+    uint16_t modeIdx = 0U;
+
+    for (uint16_t i = 0U; i < distances.size(); i++)
+    {
+        const float32_t distVal = distances[i];
+
+        for (uint16_t j = 0U; j < orderedModeDistances.size(); j++)
+        {
+            if (abs(orderedModeDistances[j] - distances[i]) < maxPixelDelta)
+            {
+                // Update entry
+                orderedModeDistancesCount[j]++;
+                orderedModeDistances[j] += (orderedModeDistances[j] - distances[i]) / orderedModeDistancesCount[j];
+                if (orderedModeDistancesCount[j] > orderedModeDistancesCount[modeIdx])
+                {
+                    modeIdx = j;
+                }
+            }
+            else
+            {
+                // Add entry
+                orderedModeDistances.push_back(distances[i]);
+                orderedModeDistancesCount.push_back(1U);
+            }
+        }
+    }
+
+}
+
+
 uint32_t CheckerboardFinder::detectBoards(cv::Mat& image, const std::vector<Feature>& features, std::vector<Checkerboard>& boardIdx)
 {
     imSize = image.size();
@@ -74,7 +122,7 @@ uint32_t CheckerboardFinder::detectBoards(cv::Mat& image, const std::vector<Feat
     std::vector<uint16_t> featLineAssociation[1000] = {}; // Indexing by feature i will return the index list of all lines passing through or close to i
     std::vector<uint16_t> lineFeatAssociation[1000] = {}; // Indexing by line j will return the index list of all features along or close to j
 
-    // Go through all features and associate lines and features
+    // Go through all lines and associate lines and features
     for (uint16_t i = 0U; i < lineCount; i++)
     {
         const cv::Vec2f& lineTangent = lines[i];
@@ -94,13 +142,15 @@ uint32_t CheckerboardFinder::detectBoards(cv::Mat& image, const std::vector<Feat
 
     const float32_t maxPixelDelta = 10.0F;
     const uint16_t minConsecutiveCheckerboardFeatures = 4U;
-
+    const float32_t minLineAgreement = 0.8F;
+    const float32_t maxLineDeviationAngle_deg = 10.0F;
+    const float32_t maxLineDeviationAngle_rad = 2.0F * acosf(0.0F) * maxLineDeviationAngle_deg / 180.0F; // Convert degrees to radians
 
     // Find the checkerboard index of each feature, if it exists on one
     for (uint16_t featIdx = 0U; featIdx < cFeatureCount; featIdx++)
     {
         // Feature has already been processed
-        if (featureState[featIdx] == featureState::unprocessed)
+        if (featureState[featIdx] != featureState::unprocessed)
             continue;
 
         // Pick a feature
@@ -124,46 +174,13 @@ uint32_t CheckerboardFinder::detectBoards(cv::Mat& image, const std::vector<Feat
             
             std::vector<float32_t> distances;
 
-            // Feature order should already be in ascending y
-            for (uint16_t lineFeatIdx = 0U; lineFeatIdx < lineFeatures.size() - 1U; lineFeatIdx++)
-            {
-                float32_t dist = sqrt(pow(features[lineFeatures[lineFeatIdx]].x - features[lineFeatures[lineFeatIdx + 1]].x, 2) + pow(features[lineFeatures[lineFeatIdx]].y - features[lineFeatures[lineFeatIdx + 1]].y, 2));
-
-                distances.push_back(dist);
-            }
-
-            float32_t modeDist = 0.0F;
+            computeLineFeatureDistances(distances, lineFeatures, features);
 
             // Compute the inter-feature distance along the line
             std::vector<float32_t> orderedModeDistances;
             std::vector<uint16_t> orderedModeDistancesCount;
 
-            uint16_t modeIdx = 0U;
-
-            for (uint16_t i = 0U; i < distances.size(); i++)
-            {
-                const float32_t distVal = distances[i];
-
-                for (uint16_t j = 0U; j < orderedModeDistances.size(); j++)
-                {
-                    if (abs(orderedModeDistances[j] - distances[i]) < maxPixelDelta)
-                    {
-                        // Update entry
-                        orderedModeDistancesCount[j]++;
-                        orderedModeDistances[j] += (orderedModeDistances[j] - distances[i]) / orderedModeDistancesCount[j];
-                        if (orderedModeDistancesCount[j] > orderedModeDistancesCount[modeIdx])
-                        {
-                            modeIdx = j;
-                        }
-                    } 
-                    else
-                    {
-                        // Add entry
-                        orderedModeDistances.push_back(distances[i]);
-                        orderedModeDistancesCount.push_back(1U);
-                    }
-                }
-            }
+            computeModeFeatureDistances(orderedModeDistances, orderedModeDistancesCount, distances, maxPixelDelta);
 
             // Determine the plausability of a sequence of features are part of a checkerboard
             std::vector<std::vector<uint16_t>> possibleCheckerboards;
@@ -180,12 +197,14 @@ uint32_t CheckerboardFinder::detectBoards(cv::Mat& image, const std::vector<Feat
                     // Find features which fit the spacing criteria
                     for (uint16_t j = 0U; j < distances.size(); j++)
                     {
-                        if (abs(distances[i] - orderedModeDistancesCount[modeIdx]) < maxPixelDelta)
+
+                        // If the distance is within the delta, add it to a possible checkerboard list and increment count
+                        if (abs(distances[i] - orderedModeDistances[i]) < maxPixelDelta)
                         {
                             tempVec.push_back(lineFeatures[i]);
                             sequentialCount++;
                         }
-                        // If there has been at least one value so far
+                        // If there has been at least one value so far and the current distance is not within the max delta, add the feature to the list and attempt to push it back
                         else if (sequentialCount > 0U)
                         {
                             // Push back the last value and reset the counter
@@ -200,11 +219,108 @@ uint32_t CheckerboardFinder::detectBoards(cv::Mat& image, const std::vector<Feat
                             tempVec = std::vector<uint16_t>();
                         }
                     }
+
+                    // Might iterate once too few times
+                    if (sequentialCount > 0U)
+                    {
+                        // Push back the last value and reset the counter
+                        sequentialCount = 0U;
+                        tempVec.push_back(lineFeatures[i]);
+
+                        if (sequentialCount > minConsecutiveCheckerboardFeatures)
+                            // Add the list to the list of possible vectors
+                            possibleCheckerboards.push_back(tempVec);
+                    }
                 }
             }
 
             // We now have a list of possible checkerboard features
             // We need to traverse the graph created by them and add them to a checkerboard
+            for (uint16_t checkerboardIdx = 0U; checkerboardIdx < possibleCheckerboards.size(); checkerboardIdx++)
+            {
+                // Potential checkerboard, to be filled and output if valid set is found
+                Checkerboard potentialCheckerboard;
+
+                // Get feature list reference
+                std::vector<uint16_t>& featureIdxList = possibleCheckerboards[checkerboardIdx];
+
+                // Flag to be set if/when a valid checkerboard has been found so iterations can end (should never find 2 potential solutions)
+                bool foundValidSet = false;
+
+                // Iterate over all features in the potential checkerboard row/column
+                for (uint16_t checkerboardFeatIdx = 0U; checkerboardFeatIdx < featureIdxList.size(); checkerboardFeatIdx++)
+                {
+
+                    // Get the list of lines which pass through the current feature
+                    const std::vector<uint16_t>& checkerboardLineList = featLineAssociation[featureIdxList[checkerboardFeatIdx]];
+
+                    // Iterate over all lines going through potential first checkerboard feature
+                    for (uint16_t checkerboardLineIdx = 0U; checkerboardFeatIdx < checkerboardLineList.size(); checkerboardLineIdx++)
+                    {
+                        // Get line angle
+                        const cv::Vec2f& lineNormVec = lines[checkerboardLineList[checkerboardLineIdx]];
+                        const float32_t theta_rad = atan2f(lineNormVec[1], lineNormVec[0]);
+
+                        float32_t agreementCount = 0.0F;
+
+                        float32_t dist1 = 0.0F, dist2 = 0.0F;
+
+                        const std::vector<uint16_t>& lineFeatures = lineFeatAssociation[checkerboardLineList[checkerboardLineIdx]];
+
+                        // Don't compute distances if there is only one feature (for line to be made, there should always be a few features along it
+                        if (lineFeatures.size() > 2)
+                            for (int16_t testLineFeatIdx = 0U; testLineFeatIdx < lineFeatures.size() - 1; testLineFeatIdx++)
+                            {
+                                const uint16_t testLineFeatureIdx = lineFeatures[testLineFeatIdx];
+
+                                if (testLineFeatureIdx == featureIdxList[checkerboardFeatIdx])
+                                {
+                                    if (testLineFeatIdx == 0)
+                                    {
+                                        dist2 = featureDistance(features[testLineFeatureIdx], features[lineFeatures[testLineFeatIdx + 1U]]);
+                                        dist1 = dist2;
+                                    }
+                                    else if (testLineFeatIdx == lineFeatures.size() - 2)
+                                    {
+                                        dist2 = featureDistance(features[testLineFeatureIdx], features[lineFeatures[testLineFeatIdx - 1U]]);
+                                        dist1 = dist2;
+                                    }
+                                    else
+                                    {
+                                        dist2 = featureDistance(features[testLineFeatureIdx], features[lineFeatures[testLineFeatIdx - 1U]]);
+                                        dist1 = featureDistance(features[testLineFeatureIdx], features[lineFeatures[testLineFeatIdx + 1U]]);
+                                    }
+                                }
+                            }
+
+                        // Iterate over the other features in the "row" and see if there is an agreeing line
+                        for (uint16_t checkerboardOtherFeatIdx = 0U; checkerboardOtherFeatIdx < featureIdxList.size(); checkerboardOtherFeatIdx++)
+                        {
+
+                        }
+
+                        if (agreementCount/ static_cast<float32_t>(featureIdxList.size()) > minLineAgreement)
+                        {
+
+                            // We've found a checkerboard!!!!
+                            foundValidSet = true;
+                            break;
+                        }
+
+                        if (foundValidSet)
+                            break;
+                    }
+
+                    if (foundValidSet)
+                        break;
+                }
+
+                if (foundValidSet)
+                {
+                    // TODO: Fill out the checkerboard!
+                }
+            }
+
         }
 
         if (isCheckerboard)

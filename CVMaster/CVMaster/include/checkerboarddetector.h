@@ -29,6 +29,12 @@ public:
 
 	void clusterLines(std::vector<int8_t>& lineCluster, const std::vector<cv::Vec2f>& line);
 
+	float32_t featureDistance(const Feature f1, const Feature& f2);
+
+	void computeLineFeatureDistances(std::vector<float32_t>& distances, const std::vector<uint16_t>& lineFeatures, const std::vector<Feature>& features);
+
+	void computeModeFeatureDistances(std::vector<float32_t>& orderedModeDistances, std::vector<uint16_t>& orderedModeDistancesCount, const std::vector<float32_t> distances, const float32_t maxPixelDelta);
+
 	void computeFeatureLineDistance(std::vector<float32_t>& distances, const std::vector<Feature>& features, const cv::Vec2f& lineNormal);
 
 	/**
@@ -49,7 +55,8 @@ private:
 	enum featureState : int32_t
 	{
 		unprocessed = -2,
-		noBoard = -1
+		noBoard = -1,
+		processed = 0
 	};
 
 	cv::Size imSize;

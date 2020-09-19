@@ -25,7 +25,7 @@ void cornerHarris_demo(int, void*);
 int main(int argc, char** argv)
 {
     // Read the image file
-    const Mat image = imread("C:/Dev/Data/Images/Calibration/Tellak/6.png");
+    const Mat image = imread("C:/Dev/Data/Images/Calibration/Tellak/7.png");
 
     if (image.empty()) // Check for failure
     {
