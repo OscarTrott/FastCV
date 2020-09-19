@@ -99,6 +99,7 @@ uint32_t CheckerboardFinder::detectBoards(cv::Mat& image, const std::vector<Feat
     }
 
     const float32_t maxPixelDelta = 10.0F;
+    const uint16_t minConsecutiveCheckerboardFeatures = 4U;
 
     for (uint16_t featIdx = 0U; featIdx < cFeatureCount; featIdx++)
     {
@@ -122,7 +123,6 @@ uint32_t CheckerboardFinder::detectBoards(cv::Mat& image, const std::vector<Feat
                 continue;
             
             std::vector<float32_t> distances;
-            std::vector<uint16_t> distanceCount;
 
             // Feature order should already be in ascending y
             for (uint16_t lineFeatIdx = 0U; lineFeatIdx < lineFeatures.size() - 1U; lineFeatIdx++)
@@ -130,18 +130,63 @@ uint32_t CheckerboardFinder::detectBoards(cv::Mat& image, const std::vector<Feat
                 float32_t dist = sqrt(pow(features[lineFeatures[lineFeatIdx]].x - features[lineFeatures[lineFeatIdx + 1]].x, 2) + pow(features[lineFeatures[lineFeatIdx]].y - features[lineFeatures[lineFeatIdx + 1]].y, 2));
 
                 distances.push_back(dist);
-                distanceCount.push_back(1U);
             }
 
             float32_t modeDist = 0.0F;
+
+            std::vector<float32_t> orderedModeDistances;
+            std::vector<uint16_t> orderedModeDistancesCount;
+
+            uint16_t modeIdx = 0U;
 
             for (uint16_t i = 0U; i < distances.size(); i++)
             {
                 const float32_t distVal = distances[i];
 
-                for (uint16_t j = i; j < distances.size(); j++)
+                for (uint16_t j = 0U; j < orderedModeDistances.size(); j++)
                 {
+                    if (abs(orderedModeDistances[j] - distances[i]) < maxPixelDelta)
+                    {
+                        // Update entry
+                        orderedModeDistancesCount[j]++;
+                        orderedModeDistances[j] += (orderedModeDistances[j] - distances[i]) / orderedModeDistancesCount[j];
+                        if (orderedModeDistancesCount[j] > orderedModeDistancesCount[modeIdx])
+                        {
+                            modeIdx = j;
+                        }
+                    } 
+                    else
+                    {
+                        // Add entry
+                        orderedModeDistances.push_back(distances[i]);
+                        orderedModeDistancesCount.push_back(1U);
+                    }
+                }
+            }
 
+            std::vector<uint16_t> orderedModeFeatures;
+
+            for (uint16_t i = 0U; i < orderedModeDistancesCount.size(); i++)
+            {
+                // A possible line of features along checkerboard
+                if (orderedModeDistancesCount[i] > minConsecutiveCheckerboardFeatures)
+                {
+                    bool last = false;
+
+                    // Find features which fit the spacing criteria
+                    for (uint16_t j = 0U; j < distances.size(); j++)
+                    {
+                        if (abs(distances[i] - orderedModeDistancesCount[modeIdx]) < maxPixelDelta)
+                        {
+                            orderedModeFeatures.push_back(lineFeatures[i]);
+                            last = true;
+                        }
+                        else if (last)
+                        {
+                            last = false;
+                            orderedModeFeatures.push_back(lineFeatures[i]);
+                        }
+                    }
                 }
             }
         }
