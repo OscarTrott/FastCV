@@ -296,10 +296,76 @@ uint32_t CheckerboardFinder::detectBoards(cv::Mat& image, const std::vector<Feat
                         // Iterate over the other features in the "row" and see if there is an agreeing line
                         for (uint16_t checkerboardOtherFeatIdx = 0U; checkerboardOtherFeatIdx < featureIdxList.size(); checkerboardOtherFeatIdx++)
                         {
+                            // Don't use the same point to validate itself
+                            if (checkerboardOtherFeatIdx == checkerboardFeatIdx)
+                                continue;
+
+                            // Get the list of lines which pass through the current feature
+                            const std::vector<uint16_t>& agreementLineList = featLineAssociation[featureIdxList[checkerboardOtherFeatIdx]];
+
+                            // Iterate through all lines passing through all other 
+                            for (uint16_t agreementLineListIdx = 0U; agreementLineListIdx < agreementLineList.size(); agreementLineListIdx++)
+                            {
+                                const float32_t agreementTheta_rad = atan2f(lineNormVec[1], lineNormVec[0]);
+
+                                // Check line iff angles are close
+                                if (abs(agreementTheta_rad - agreementTheta_rad) > maxLineDeviationAngle_rad)
+                                    continue;
+
+                                // Get the features along the purported agreement line
+                                const std::vector<uint16_t>& agreementLineFeatures = lineFeatAssociation[checkerboardLineList[checkerboardOtherFeatIdx]];
+
+                                // Only investigate the line iff there are enough features along it
+                                if (agreementLineFeatures.size() > 2)
+                                    for (int16_t agreementLineFeatureIdx = 0U; agreementLineFeatureIdx < agreementLineFeatures.size() - 1; agreementLineFeatureIdx++)
+                                    {
+                                        const uint16_t agreementLineFeature = agreementLineFeatures[agreementLineFeatureIdx];
+
+                                        // Check if the feature is the one we're considering
+                                        if (agreementLineFeature == featureIdxList[checkerboardOtherFeatIdx])
+                                        {
+                                            if (agreementLineFeatureIdx == 0)
+                                            {
+                                                float32_t distance = featureDistance(features[agreementLineFeature], features[lineFeatures[agreementLineFeatureIdx + 1U]]);
+                                                
+                                                if (abs(distance - dist1) < maxPixelDelta)
+                                                {
+
+                                                }
+
+                                                if (abs(distance - dist2) < maxPixelDelta)
+                                                {
+                                                    agreementCount++;
+                                                }
+                                            }
+                                            else if (agreementLineFeatureIdx == lineFeatures.size() - 2)
+                                            {
+                                                float32_t distance = featureDistance(features[agreementLineFeature], features[lineFeatures[agreementLineFeatureIdx - 1U]]);
+
+                                                if (abs(distance - dist1) < maxPixelDelta || abs(distance - dist2) < maxPixelDelta)
+                                                {
+                                                    agreementCount++;
+                                                }
+                                            }
+                                            else
+                                            {
+                                                float32_t distance1 = featureDistance(features[agreementLineFeature], features[lineFeatures[agreementLineFeatureIdx - 1U]]);
+                                                float32_t distance2 = featureDistance(features[agreementLineFeature], features[lineFeatures[agreementLineFeatureIdx - 1U]]);
+
+                                                if (abs(distance1 - dist1) < maxPixelDelta || abs(distance1 - dist2) < maxPixelDelta || 
+                                                    abs(distance2 - dist1) < maxPixelDelta || abs(distance2 - dist2) < maxPixelDelta)
+                                                {
+                                                    agreementCount++;
+                                                }
+                                            }
+                                        }
+                                    }
+                            }
+
 
                         }
 
-                        if (agreementCount/ static_cast<float32_t>(featureIdxList.size()) > minLineAgreement)
+                        if (agreementCount / static_cast<float32_t>(featureIdxList.size()) > minLineAgreement)
                         {
 
                             // We've found a checkerboard!!!!
