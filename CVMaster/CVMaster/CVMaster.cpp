@@ -7,6 +7,7 @@
 #include "sobelfilter.h"
 #include "harriscorner_featuredetector.h"
 #include "checkerboarddetector.h"
+#include "localIntensityDimming.h"
 
 #include <iostream>
 #include <string>
@@ -45,13 +46,25 @@ int main(int argc, char** argv)
     */
     Mat greyImage = Mat(image.size(), CV_8UC1);
     cv::cvtColor(image, greyImage, COLOR_RGB2GRAY);
+#ifdef NDEBUG
     resize(greyImage, greyImage, Size(1296, 968));//Size(640, 480));//
+#else
+    resize(greyImage, greyImage, Size(640, 480));
+#endif // NDEBUG
 
     cv::String windowName = "Vision output"; //Name of the window
 
     namedWindow(windowName); // Create a window
 
-    imshow(windowName, image); // Show our image inside the created window.
+    imshow(windowName, greyImage); // Show our image inside the created window.
+
+    waitKey(0); // Wait for any keystroke in the window
+
+    // Perform local dimming
+    LocalDimming dimmer = LocalDimming();
+    // dimmer.processImage(greyImage, 5);
+
+    imshow(windowName, greyImage); // Show our image inside the created window.
 
     waitKey(0); // Wait for any keystroke in the window
 
@@ -78,6 +91,28 @@ int main(int argc, char** argv)
     destroyWindow(windowName); //destroy the created window
 
     checkerboardFinder.detectBoards(contours, features, checkerboards);
+
+    greyImage.convertTo(greyImage, CV_8UC3);
+    cv::cvtColor(greyImage, greyImage, COLOR_GRAY2BGR);
+
+    for (uint16_t row = 0U; row < checkerboards[0].getHeight(); row++)
+    { 
+        for (uint16_t col = 0U; col < checkerboards[0].getWidth(); col++)
+        {
+
+            const cv::Scalar colour = cv::Scalar(255, 0, 0);
+            const uint32_t radius = 5;
+
+            const Feature& feat = checkerboards[0][row][col];
+
+            cv::circle(greyImage, cv::Point(feat.x, feat.y), radius, colour);
+        }
+    }
+
+    imshow(windowName, greyImage); // Show our image inside the created window.
+    waitKey(0); // Wait for any keystroke in the window
+
+
 
     return 0;
 }

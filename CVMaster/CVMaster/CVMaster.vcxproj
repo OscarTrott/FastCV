@@ -173,6 +173,7 @@
     <ClInclude Include="include\ifeaturedetector.h" />
     <ClInclude Include="include\imagefilter.h" />
     <ClInclude Include="include\irenderer.h" />
+    <ClInclude Include="include\localIntensityDimming.h" />
     <ClInclude Include="include\random_featuredetector.h" />
     <ClInclude Include="include\sobelfilter.h" />
     <ClInclude Include="include\typedefinitions.h" />

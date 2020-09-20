@@ -47,6 +47,16 @@ public:
         width = width_;
     }
 
+    const uint16_t getHeight() const
+    {
+        return height;
+    }
+
+    const uint16_t getWidth() const
+    {
+        return width;
+    }
+
     row& operator[] (const uint16_t rowIdx)
     {
         assert(rowIdx < MAXSIZE);
