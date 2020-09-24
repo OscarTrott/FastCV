@@ -49,7 +49,7 @@ int main(int argc, char** argv)
 #ifdef NDEBUG
     resize(greyImage, greyImage, Size(1296, 968));//Size(640, 480));//
 #else
-    resize(greyImage, greyImage, Size(640, 480));
+    resize(greyImage, greyImage, Size(1296, 968));//Size(640, 480));
 #endif // NDEBUG
 
     cv::String windowName = "Vision output"; //Name of the window
