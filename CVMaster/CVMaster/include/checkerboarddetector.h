@@ -29,27 +29,38 @@ public:
 
 	void clusterLines(std::vector<int8_t>& lineCluster, const std::vector<cv::Vec2f>& line);
 
-	void associateLineFeatures();
+	void associateLineFeatures(std::vector<Feature>& features, std::vector<cv::Vec2f>& lines, std::vector<uint16_t>(&featLineAssociation)[1000], std::vector<uint16_t>(&lineFeatAssociation)[1000]);
 
 	void checkerboardFeatureTraversal(std::vector<Checkerboard>& checkerboards);
 
-	float32_t featureDistance(const Feature f1, const Feature& f2);
+	static float32_t featureDistance(const Feature f1, const Feature& f2);
 
-	void findPossibleCheckerboardRowPermutation(std::vector<std::vector<uint16_t>>& checkerboardOutput, const std::vector<float32_t>& distances, const std::vector<uint16_t>& lineFeatures, std::vector<float32_t>& orderedModeDistances, std::vector<uint16_t>& orderedModeDistancesCount);
+	static void findPossibleCheckerboardRowPermutation(std::vector<std::vector<uint16_t>>& checkerboardOutput, const std::vector<float32_t>& distances, const std::vector<uint16_t>& lineFeatures, std::vector<float32_t>& orderedModeDistances, std::vector<uint16_t>& orderedModeDistancesCount);
 
-	void computeLineFeatureDistances(std::vector<float32_t>& distances, const std::vector<uint16_t>& lineFeatures, const std::vector<Feature>& features);
+	static void computeLineFeatureDistances(std::vector<float32_t>& distances, const std::vector<uint16_t>& lineFeatures, const std::vector<Feature>& features);
 
-	bool addNextLine(Checkerboard& checkerboard, const std::vector<uint16_t>& lineFeatures);
+	static bool addNextLine(Checkerboard& checkerboard, const std::vector<uint16_t>& lineFeatures, const std::vector<Feature> features,
+		const std::vector<cv::Vec2f> lines,
+		std::vector<int32_t> featureState,
+		const std::vector<uint16_t> featLineAssociation[1000],
+		const std::vector<uint16_t> lineFeatAssociation[1000],
+		cv::Mat& renderingImage);
 
-	void computeModeFeatureDistances(std::vector<float32_t>& orderedModeDistances, std::vector<uint16_t>& orderedModeDistancesCount, const std::vector<float32_t> distances, const float32_t maxPixelDelta);
+	static void computeModeFeatureDistances(std::vector<float32_t>& orderedModeDistances, std::vector<uint16_t>& orderedModeDistancesCount, const std::vector<float32_t> distances, const float32_t maxPixelDelta);
 
 	void computeFeatureLineDistance(std::vector<float32_t>& distances, const std::vector<Feature>& features, const cv::Vec2f& lineNormal);
 
-	void plotLine(cv::Mat& image, const cv::Vec2f& lineNorm);
+	static void plotLine(cv::Mat& image, const cv::Vec2f& lineNorm);
 
-	void plotLine(cv::Mat& image, const float32_t theta_rad, const float32_t phi);
+	static void plotLine(cv::Mat& image, const float32_t theta_rad, const float32_t phi);
 
-	void plotFeatureList(cv::Mat& image, const FeatureList& features);
+	/**
+	 *	@param[in] featLineAssociation Indexing by feature i will return the index list of all lines passing through or close to i
+	 *	@param[in] lineFeatAssociation Indexing by line j will return the index list of all features along or close to j
+	 */
+	static void findCheckerboard(const std::vector<Feature> features, const std::vector<cv::Vec2f>, const std::vector<uint16_t> featLineAssociation[1000], const std::vector<uint16_t> lineFeatAssociation[1000], std::vector<Checkerboard> &checkerboards, cv::Mat& renderImg);
+
+	static void plotFeatureList(cv::Mat& image, const FeatureList& features);
 
 	/**
 	 *	@brief Finds checkerboard patterns within a given image
@@ -84,9 +95,9 @@ private:
 
 	cv::Mat renderingImage;
 
-	const float32_t maxPixelDelta = 3.0F; // Max inter-feature delta distance to be classified as having the same distance
+	static const int32_t maxPixelDelta = 3; // Max inter-feature delta distance to be classified as having the same distance
 	const float32_t maxDist = 5.0F; // Maximum distance in pixels of a line from a feature
-	const uint16_t minConsecutiveCheckerboardFeatures = 4U;
+	static const uint16_t minConsecutiveCheckerboardFeatures = 4U;
 	const float32_t minLineAgreement = 0.8F;
 	const float32_t maxLineDeviationAngle_deg = 10.0F;
 	const float32_t maxLineDeviationAngle_rad = 2.0F * acosf(0.0F) * maxLineDeviationAngle_deg / 180.0F; // Convert degrees to radians

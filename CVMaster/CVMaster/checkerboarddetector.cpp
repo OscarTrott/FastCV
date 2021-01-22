@@ -58,6 +58,9 @@ void CheckerboardFinder::plotLine(cv::Mat& image, const cv::Vec2f& lineNorm)
 
 void CheckerboardFinder::plotFeatureList(cv::Mat& image, const FeatureList& features)
 {
+    image.convertTo(image, CV_8UC3);
+    cv::cvtColor(image, image, cv::COLOR_GRAY2BGR);
+
     cv::Point tempPoint;
     for (uint16_t i = 0U; i < features.size(); i++)
     {
@@ -68,7 +71,7 @@ void CheckerboardFinder::plotFeatureList(cv::Mat& image, const FeatureList& feat
     }
 }
 
-void CheckerboardFinder::associateLineFeatures()
+void CheckerboardFinder::associateLineFeatures(std::vector<Feature>& features, std::vector<cv::Vec2f>& lines, std::vector<uint16_t> (&featLineAssociation)[1000], std::vector<uint16_t> (&lineFeatAssociation)[1000])
 {
     std::vector<float32_t> distances = std::vector<float32_t>(features.size(), -1.0);
 
@@ -93,6 +96,109 @@ void CheckerboardFinder::associateLineFeatures()
 
 void CheckerboardFinder::checkerboardFeatureTraversal(std::vector<Checkerboard>& checkerboards)
 {
+    // Find the checkerboard index of each feature, if it exists on one
+    for (uint16_t featIdx = 0U; featIdx < features.size(); featIdx++)
+    {
+        // Feature has already been processed
+        if (featureState[featIdx] != FeatureState::unprocessed)
+            continue;
+
+        // Pick a feature
+        const std::vector<uint16_t>& lineIndexList = featLineAssociation[featIdx];
+
+        std::vector<uint16_t> featureIndexes;
+
+        bool isCheckerboard = true;
+
+        // Go through every line through the feature and check if it is a checkerboard line
+        for (uint16_t lineIdx = 0U; lineIdx < lineIndexList.size(); lineIdx++)
+        {
+            const cv::Vec2f& lineNormVec = lines[lineIndexList[lineIdx]];
+
+            const float32_t theta_rad = atan2(lineNormVec[1], lineNormVec[0]);
+            const float32_t phi = sqrt(pow(lineNormVec[0], 2) + pow(lineNormVec[1], 2));
+
+            FeatureList li;
+
+            li.push_back(features[featIdx]);
+
+            cv::Mat renderCopy = renderingImage.clone();
+            plotFeatureList(renderCopy, li);
+            plotLine(renderCopy, lineNormVec);
+
+            Display disp;
+
+            disp.showImg(renderCopy);
+
+            std::vector<uint16_t>& lineFeatures = lineFeatAssociation[lineIndexList[lineIdx]];
+
+            if (lineFeatures.size() <= 1)
+                continue;
+
+            std::vector<float32_t> distances;
+
+            computeLineFeatureDistances(distances, lineFeatures, features);
+
+            // Compute the inter-feature distance along the line
+            std::vector<float32_t> orderedModeDistances;
+            std::vector<uint16_t> orderedModeDistancesCount;
+
+            computeModeFeatureDistances(orderedModeDistances, orderedModeDistancesCount, distances, maxPixelDelta);
+
+            // Determine the plausability that a sub-sequence of features are part of a checkerboard
+            std::vector<std::vector<uint16_t>> possibleCheckerboards;
+
+            findPossibleCheckerboardRowPermutation(possibleCheckerboards, distances, lineFeatures, orderedModeDistances, orderedModeDistancesCount);
+
+            // We now have a list of possible checkerboard features
+            // We need to traverse the graph created by them and add them to a checkerboard
+            for (uint16_t checkerboardIdx = 0U; checkerboardIdx < possibleCheckerboards.size(); checkerboardIdx++)
+            {
+                // Potential checkerboard, to be filled and output if valid set is found
+                Checkerboard * potentialCheckerboard;
+
+                // Get feature list reference
+                std::vector<uint16_t>& featureIdxList = possibleCheckerboards[checkerboardIdx];
+
+                //Try and identify a checkerboard based on the given line and feature set
+                //if (addNextLine(*potentialCheckerboard, featureIdxList))
+                //    checkerboards.push_back(*potentialCheckerboard);
+                
+                //delete potentialCheckerboard;
+
+                // Reset the checkerboard for the next checkerboard to be found
+                potentialCheckerboard = new Checkerboard();
+            }
+
+        }
+
+        if (featureState[featIdx] == FeatureState::unprocessed)
+            featureState[featIdx] = FeatureState::processed;
+    }
+}
+
+bool isLineCheckerboard(
+    const int lineIdx,
+    const std::vector<Feature> features,
+    const std::vector<cv::Vec2f> lines,
+    const std::vector<uint16_t> featLineAssociation[1000],
+    const std::vector<uint16_t> lineFeatAssociation[1000],
+    std::vector<Checkerboard>& checkerboards,
+    std::vector<int32_t>& featureState,
+    cv::Mat& renderImg)
+{
+    return false;
+}
+
+void CheckerboardFinder::findCheckerboard(
+    const std::vector<Feature> features, 
+    const std::vector<cv::Vec2f> lines, 
+    const std::vector<uint16_t> featLineAssociation[1000], 
+    const std::vector<uint16_t> lineFeatAssociation[1000], 
+    std::vector<Checkerboard>& checkerboards,
+    cv::Mat& renderImg)
+{
+    std::vector<int32_t> featureState = std::vector<int32_t>(features.size(), FeatureState::unprocessed);
 
     // Find the checkerboard index of each feature, if it exists on one
     for (uint16_t featIdx = 0U; featIdx < features.size(); featIdx++)
@@ -116,13 +222,11 @@ void CheckerboardFinder::checkerboardFeatureTraversal(std::vector<Checkerboard>&
             const float32_t theta_rad = atan2(lineNormVec[1], lineNormVec[0]);
             const float32_t phi = sqrt(pow(lineNormVec[0], 2) + pow(lineNormVec[1], 2));
 
-
             FeatureList li;
 
-            //for (uint16_t i = 0U; i < inLneFeatures.size(); i++)
             li.push_back(features[featIdx]);
 
-            cv::Mat renderCopy = renderingImage.clone();
+            cv::Mat renderCopy = renderImg.clone();
             plotFeatureList(renderCopy, li);
             plotLine(renderCopy, lineNormVec);
 
@@ -130,8 +234,8 @@ void CheckerboardFinder::checkerboardFeatureTraversal(std::vector<Checkerboard>&
 
             disp.showImg(renderCopy);
 
-
-            std::vector<uint16_t>& lineFeatures = lineFeatAssociation[lineIndexList[lineIdx]];
+            // Get all feature indices along the line
+            const std::vector<uint16_t>& lineFeatures = lineFeatAssociation[lineIndexList[lineIdx]];
 
             if (lineFeatures.size() <= 1)
                 continue;
@@ -162,17 +266,13 @@ void CheckerboardFinder::checkerboardFeatureTraversal(std::vector<Checkerboard>&
                 std::vector<uint16_t>& featureIdxList = possibleCheckerboards[checkerboardIdx];
 
                 //Try and identify a checkerboard based on the given line and feature set
-                if (addNextLine(potentialCheckerboard, featureIdxList))
+                if (addNextLine(potentialCheckerboard, featureIdxList, features, lines, featureState, featLineAssociation, lineFeatAssociation, renderImg))
                     checkerboards.push_back(potentialCheckerboard);
-                
+
                 // Reset the checkerboard for the next checkerboard to be found
                 potentialCheckerboard = Checkerboard();
             }
-
         }
-
-        if (featureState[featIdx] == FeatureState::unprocessed)
-            featureState[featIdx] = FeatureState::processed;
     }
 }
 
@@ -306,8 +406,16 @@ void CheckerboardFinder::computeModeFeatureDistances(std::vector<float32_t>& ord
 
 }
 
-bool CheckerboardFinder::addNextLine(Checkerboard& checkerboard, const std::vector<uint16_t>& inLneFeatures)
+bool CheckerboardFinder::addNextLine(Checkerboard& checkerboard, const std::vector<uint16_t>& inLneFeatures, const std::vector<Feature> features,
+    const std::vector<cv::Vec2f> lines,
+    std::vector<int32_t> featureState,
+    const std::vector<uint16_t> featLineAssociation[1000],
+    const std::vector<uint16_t> lineFeatAssociation[1000],
+    cv::Mat& renderingImage)
 {
+    const float32_t maxLineDeviationAngle_deg = 10.0F;
+    const float32_t maxLineDeviationAngle_rad = 2.0F * acosf(0.0F) * maxLineDeviationAngle_deg / 180.0F; // Convert degrees to radians
+
     FeatureList li;
 
     for (uint16_t i = 0U; i < inLneFeatures.size(); i++)
@@ -394,6 +502,7 @@ bool CheckerboardFinder::addNextLine(Checkerboard& checkerboard, const std::vect
 
                     // Only investigate the line iff there are enough features along it
                     if (agreementLineFeatures.size() > 2)
+                    {
                         for (int16_t agreementLineFeatureIdx = 0U; agreementLineFeatureIdx < agreementLineFeatures.size() - 1; agreementLineFeatureIdx++)
                         {
                             const uint16_t agreementLineFeature = agreementLineFeatures[agreementLineFeatureIdx];
@@ -447,7 +556,7 @@ bool CheckerboardFinder::addNextLine(Checkerboard& checkerboard, const std::vect
 
                                 if (distanceHolds)
                                 {
-                                    std::vector<uint16_t>& nextRowLineList = featLineAssociation[agreementLineFeature];
+                                    const std::vector<uint16_t>& nextRowLineList = featLineAssociation[agreementLineFeature];
 
                                     // Iterate over the lines and check that there is one that matches
                                     for (int16_t nextRowLineIdx = 0; nextRowLineIdx < nextRowLineList.size(); nextRowLineIdx++)
@@ -456,7 +565,7 @@ bool CheckerboardFinder::addNextLine(Checkerboard& checkerboard, const std::vect
                                         uint16_t nextRowLine = nextRowLineList[nextRowLineIdx];
 
                                         // Get the row normal
-                                        cv::Vec2f& nextRowNorm = lines[nextRowLine];
+                                        const cv::Vec2f& nextRowNorm = lines[nextRowLine];
 
                                         // Get the norm angle
                                         float32_t nextRowLineAngle = atan2f(nextRowNorm[1], nextRowNorm[0]);
@@ -534,7 +643,7 @@ bool CheckerboardFinder::addNextLine(Checkerboard& checkerboard, const std::vect
                                                 newRowFeatures.push_back(newRowFeatures[pushBackPermutation]);
                                             }
 
-                                            addNextLine(checkerboard, newRowFeatures);
+                                            addNextLine(checkerboard, newRowFeatures, features, lines, featureState, featLineAssociation, lineFeatAssociation, renderingImage);
 
                                             // The checkerboard is only valid if there are enough features found on it
                                             return checkerboard.getHeight() >= minConsecutiveCheckerboardFeatures && checkerboard.getWidth() >= minConsecutiveCheckerboardFeatures;
@@ -543,6 +652,7 @@ bool CheckerboardFinder::addNextLine(Checkerboard& checkerboard, const std::vect
                                 }
                             }
                         }
+                    }
                 }
             }
         }
@@ -574,7 +684,7 @@ uint32_t CheckerboardFinder::detectBoards(cv::Mat& image, const std::vector<Feat
 
     const uint32_t lineCount = hougher.findLines(image, features, lines, 200.0F);
 
-    associateLineFeatures();
+    associateLineFeatures(features, lines, featLineAssociation, lineFeatAssociation);
 
     checkerboardFeatureTraversal(checkerboards);
 

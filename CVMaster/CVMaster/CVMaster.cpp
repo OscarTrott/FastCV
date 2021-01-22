@@ -25,6 +25,54 @@ void cornerHarris_demo(int, void*);
 
 int main(int argc, char** argv)
 {
+    /*const int featRows = 5;
+    const int featCols = 5;
+
+    const int imWidth = 500, imHeight = 500;
+
+    const int firstFeatPosX = 150;
+    const int firstFeatPosY = 150;
+
+    std::vector<Feature> feats;
+
+    for (int row = 0; row < featRows; row++)
+    {
+        for (int col = 0; col < featCols; col++)
+        {
+            feats.push_back(Feature(firstFeatPosX + col * 40, firstFeatPosY + row * 40));
+        }
+    }
+
+    FeatureRenderer featureRender = FeatureRenderer();
+
+    Mat grey = Mat(imHeight, imWidth, CV_8UC1);
+    grey = 0U;
+    Mat greyRender = grey;
+    featureRender.processImage(greyRender, feats);
+    cv::String windowsName = "Vision output"; //Name of the window
+
+    //imshow(windowsName, grey); // Show our image inside the created window.
+
+    waitKey(0); // Wait for any keystroke in the window
+
+    HoughTransform hougher = HoughTransform();
+
+    grey.convertTo(grey, CV_32FC1);
+
+    std::vector<cv::Vec2f> lines;
+    hougher.findLines(grey, feats, lines, -0.5F);
+
+    CheckerboardFinder checkerboardsFinder = CheckerboardFinder();
+    std::vector<uint16_t> featLineAssociation[1000] = {};
+    std::vector<uint16_t> lineFeatAssociation[1000] = {};
+    checkerboardsFinder.associateLineFeatures(feats, lines, featLineAssociation, lineFeatAssociation);
+
+    std::vector<Checkerboard> checkerboard;
+    checkerboardsFinder.findCheckerboard(feats, lines, featLineAssociation, lineFeatAssociation, checkerboard, greyRender);
+
+    // Finish early
+    return 0;*/
+
     // Read the image file
     const Mat image = imread("C:/Dev/Data/Images/Calibration/Tellak/7.png");
 
@@ -111,8 +159,6 @@ int main(int argc, char** argv)
 
     imshow(windowName, greyImage); // Show our image inside the created window.
     waitKey(0); // Wait for any keystroke in the window
-
-
 
     return 0;
 }

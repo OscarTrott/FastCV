@@ -33,23 +33,26 @@ bool SobelFilter::processImage(cv::Mat& img)
 
 void SobelFilter::resetFilters()
 {
-    verticalFilter.at<float32_t>(0, 0) = 1.0F;
-    verticalFilter.at<float32_t>(0, 1) = 2.0F;
-    verticalFilter.at<float32_t>(0, 2) = 1.0F;
+    const float32_t corners = 3.0F;
+    const float32_t edges = 10.0F;
+
+    verticalFilter.at<float32_t>(0, 0) = corners;
+    verticalFilter.at<float32_t>(0, 1) = edges;
+    verticalFilter.at<float32_t>(0, 2) = corners;
     verticalFilter.at<float32_t>(1, 0) = 0.0F;
     verticalFilter.at<float32_t>(1, 1) = 0.0F;
     verticalFilter.at<float32_t>(1, 2) = 0.0F;
-    verticalFilter.at<float32_t>(2, 0) = -1.0F;
-    verticalFilter.at<float32_t>(2, 1) = -2.0F;
-    verticalFilter.at<float32_t>(2, 2) = -1.0F;
+    verticalFilter.at<float32_t>(2, 0) = -corners;
+    verticalFilter.at<float32_t>(2, 1) = -edges;
+    verticalFilter.at<float32_t>(2, 2) = -corners;
 
-    horizontalFilter.at<float32_t>(0, 0) = 1.0F;
-    horizontalFilter.at<float32_t>(1, 0) = 2.0F;
-    horizontalFilter.at<float32_t>(2, 0) = 1.0F;
+    horizontalFilter.at<float32_t>(0, 0) = corners;
+    horizontalFilter.at<float32_t>(1, 0) = edges;
+    horizontalFilter.at<float32_t>(2, 0) = corners;
     horizontalFilter.at<float32_t>(0, 1) = 0.0F;
     horizontalFilter.at<float32_t>(1, 1) = 0.0F;
     horizontalFilter.at<float32_t>(2, 1) = 0.0F;
-    horizontalFilter.at<float32_t>(0, 2) = -1.0F;
-    horizontalFilter.at<float32_t>(1, 2) = -2.0F;
-    horizontalFilter.at<float32_t>(2, 2) = -1.0F;
+    horizontalFilter.at<float32_t>(0, 2) = -corners;
+    horizontalFilter.at<float32_t>(1, 2) = -edges;
+    horizontalFilter.at<float32_t>(2, 2) = -corners;
 }

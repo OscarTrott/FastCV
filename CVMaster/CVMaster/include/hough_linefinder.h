@@ -40,6 +40,8 @@ public:
 
 	void plotLine(cv::Mat& image, const float32_t theta, const float32_t phi);
 
+	void plotLines(cv::Mat& image, const std::vector<cv::Vec2f>& lines);
+
 private:
 
 	bool xyToPolar(const uint32_t x, const uint32_t y, const float32_t theta_rad, float32_t& phi);

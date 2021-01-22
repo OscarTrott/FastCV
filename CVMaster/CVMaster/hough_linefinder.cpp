@@ -40,6 +40,17 @@ bool HoughTransform::xyToPolar(const uint32_t x, const uint32_t y, const float32
 	return true;
 }
 
+void HoughTransform::plotLines(cv::Mat& image, const std::vector<cv::Vec2f>& lines)
+{
+	for (int i = 0; i < lines.size(); i++)
+	{
+		const float32_t theta_rad = atan2(lines[i][1], lines[i][0]);
+		const float32_t phi = sqrt(pow(lines[i][0], 2) + pow(lines[i][1], 2));
+
+		plotLine(image, theta_rad, phi);
+	}
+}
+
 void HoughTransform::plotLine(cv::Mat& image, const float32_t theta_rad, const float32_t phi)
 {
 	cv::Point p1; // y = 0, clipped by 
@@ -116,7 +127,7 @@ uint32_t HoughTransform::findLines(cv::Mat& image,
 	// Temp point to avoid allocating and deallocating memory constantly
 	cv::Point tempPoint(0, 0);
 
-	const int32_t winRadius_pix = 1;
+	const int32_t winRadius_pix = 0;
 
 	// Iterate through features
 	for (uint32_t featIdx = 0U; featIdx < features.size(); featIdx++)
@@ -160,8 +171,8 @@ uint32_t HoughTransform::findLines(cv::Mat& image,
 	
 	cv::minMaxIdx(mBins, nullptr, &maxIntensity, nullptr, &maxLoc[0]);
 
-	const uint32_t threshold = 9;
-	disp.showImg(mBins, "Bin image");
+	const uint32_t threshold = 3;
+	//disp.showImg(mBins, "Bin image");
 
 	cv::Mat lineImg = image.clone();
 	cv::cvtColor(lineImg, lineImg, cv::COLOR_GRAY2BGR);
@@ -183,7 +194,7 @@ uint32_t HoughTransform::findLines(cv::Mat& image,
 		polarToTangent(vector[0], vector[1], theta_rad, phi);
 		lines.push_back(vector);
 
-		//plotLine(lineImg, theta_rad, phi);
+		plotLine(lineImg, theta_rad, phi);
 
 		cv::minMaxIdx(mBins, nullptr, &maxIntensity, nullptr, &maxLoc[0]);
 	}
