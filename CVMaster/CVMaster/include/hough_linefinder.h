@@ -53,6 +53,5 @@ private:
 	const uint16_t xBinOffset;
 	const float32_t pi;
 	float32_t thetaResolution_rad;
-	Display disp;
 };
 

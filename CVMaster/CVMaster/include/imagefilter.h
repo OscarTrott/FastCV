@@ -122,15 +122,6 @@ public:
         }
 
         img = outImg.clone();
-        /*
-        cv::normalize(outImg, outImg, 0, 255, cv::NORM_MINMAX, CV_32FC1, cv::Mat());
-        outImg.convertTo(outImg, CV_8UC1);
-
-        cv::String winName = "Gaussian blue";
-        cv::namedWindow(winName); // Create a window
-        cv::imshow(winName, outImg);
-        cv::waitKey(0);*/
-
         return true;
     }
 

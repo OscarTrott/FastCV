@@ -126,9 +126,7 @@ void CheckerboardFinder::checkerboardFeatureTraversal(std::vector<Checkerboard>&
             plotFeatureList(renderCopy, li);
             plotLine(renderCopy, lineNormVec);
 
-            Display disp;
-
-            disp.showImg(renderCopy);
+            Display::showImg(renderCopy);
 
             std::vector<uint16_t>& lineFeatures = lineFeatAssociation[lineIndexList[lineIdx]];
 
@@ -230,9 +228,7 @@ void CheckerboardFinder::findCheckerboard(
             plotFeatureList(renderCopy, li);
             plotLine(renderCopy, lineNormVec);
 
-            Display disp;
-
-            disp.showImg(renderCopy);
+            Display::showImg(renderCopy);
 
             // Get all feature indices along the line
             const std::vector<uint16_t>& lineFeatures = lineFeatAssociation[lineIndexList[lineIdx]];
@@ -424,9 +420,7 @@ bool CheckerboardFinder::addNextLine(Checkerboard& checkerboard, const std::vect
     cv::Mat renderCopy = renderingImage.clone();
     plotFeatureList(renderCopy, li);
 
-    Display disp;
-
-    disp.showImg(renderCopy);
+    Display::showImg(renderCopy);
 
     // Flag to be set if/when a valid checkerboard has been found so iterations can end (should never find 2 potential solutions)
     bool foundValidSet = false;

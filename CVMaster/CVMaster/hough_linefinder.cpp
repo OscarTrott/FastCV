@@ -199,7 +199,7 @@ uint32_t HoughTransform::findLines(cv::Mat& image,
 		cv::minMaxIdx(mBins, nullptr, &maxIntensity, nullptr, &maxLoc[0]);
 	}
 
-	disp.showImg(lineImg, "line image");
+	Display::showImg(lineImg, "line image");
 
 	return lines.size();
 }

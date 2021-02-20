@@ -177,6 +177,7 @@
     <ClInclude Include="include\random_featuredetector.h" />
     <ClInclude Include="include\sobelfilter.h" />
     <ClInclude Include="include\typedefinitions.h" />
+    <ClInclude Include="postProcessing.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

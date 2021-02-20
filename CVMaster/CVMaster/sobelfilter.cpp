@@ -46,6 +46,8 @@ void SobelFilter::resetFilters()
     verticalFilter.at<float32_t>(2, 1) = -edges;
     verticalFilter.at<float32_t>(2, 2) = -corners;
 
+    verticalFilter *= 1.0F / (2*corners + edges);
+
     horizontalFilter.at<float32_t>(0, 0) = corners;
     horizontalFilter.at<float32_t>(1, 0) = edges;
     horizontalFilter.at<float32_t>(2, 0) = corners;
@@ -55,4 +57,7 @@ void SobelFilter::resetFilters()
     horizontalFilter.at<float32_t>(0, 2) = -corners;
     horizontalFilter.at<float32_t>(1, 2) = -edges;
     horizontalFilter.at<float32_t>(2, 2) = -corners;
+
+    horizontalFilter *= 1.0F / (2 * corners + edges);
+
 }

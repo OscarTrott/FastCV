@@ -89,5 +89,8 @@
     <ClInclude Include="include\localIntensityDimming.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="postProcessing.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

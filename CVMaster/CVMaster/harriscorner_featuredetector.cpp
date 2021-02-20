@@ -32,15 +32,17 @@ bool HarrisFeatureDetector::processFeatures(const cv::Mat& img, cv::Mat& contour
     // Apply sobel operator in x and y
     SobelFilter sobelFilter = SobelFilter();
 
-    cv::Mat xyDerivative = cv::Mat(interimImg.size(), CV_32FC2);
-    sobelFilter.sobelFilter<float32_t>(interimImg, xyDerivative);
-
     // Compute corner strength (harris value)
     cv::Mat harrisResponse = cv::Mat(img.size(), CV_32FC1);
     const float32_t windowSizeSigma = 1.0F;
 
     cv::Mat xyList[2];
-    cv::split(xyDerivative, &xyList[0]);
+
+    xyList[0] = sobelFilter.sobelFilter<float32_t>(interimImg, true);
+    xyList[1] = sobelFilter.sobelFilter<float32_t>(interimImg, false);
+
+    xyList[0].convertTo(xyList[0], CV_32FC1);
+    xyList[1].convertTo(xyList[1], CV_32FC1);
 
     cv::Mat x2 = cv::Mat(img.size(), CV_32FC1);
     cv::Mat y2 = cv::Mat(img.size(), CV_32FC1);
@@ -87,8 +89,11 @@ bool HarrisFeatureDetector::processFeatures(const cv::Mat& img, cv::Mat& contour
 
     harrisResponse.convertTo(harrisResponse, CV_8UC1);
     harrisResponse.convertTo(interimImg, CV_32FC1);
-    sobelFilter.sobelFilter<float32_t>(interimImg, xyDerivative);
-    cv::split(xyDerivative, &xyList[0]);
+    xyList[0] = sobelFilter.sobelFilter<float32_t>(interimImg, true);
+    xyList[1] = sobelFilter.sobelFilter<float32_t>(interimImg, false);
+
+    xyList[0].convertTo(xyList[0], CV_32FC1);
+    xyList[1].convertTo(xyList[1], CV_32FC1);
 
     cv::Point point = cv::Point(0, 0);
 
