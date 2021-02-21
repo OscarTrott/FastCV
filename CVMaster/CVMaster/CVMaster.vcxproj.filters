@@ -92,5 +92,11 @@
     <ClInclude Include="postProcessing.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="saddlePointDetector.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CCA.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

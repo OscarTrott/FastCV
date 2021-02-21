@@ -21,13 +21,15 @@ private:
     uint16_t height;
     uint16_t width;
 
+    bool valid;
+
     Feature features[MAXSIZE][MAXSIZE];
 
 public:
-    Checkerboard() : height(0U), width(0U), features()
+    Checkerboard() : height(0U), width(0U), valid(true), features()
     {}
 
-    Checkerboard(const uint16_t height_, const uint16_t width_) : height(height_), width(width_), features()
+    Checkerboard(const uint16_t height_, const uint16_t width_) : height(height_), width(width_), valid(true), features()
     {
         assert(height < MAXSIZE);
         assert(width < MAXSIZE);
@@ -62,6 +64,16 @@ public:
         assert(rowIdx < MAXSIZE);
 
         return features[rowIdx];
+    }
+
+    bool isValid()
+    {
+        return valid;
+    }
+
+    void setIsValid(const bool valid_)
+    {
+        valid = valid_;
     }
 };
 

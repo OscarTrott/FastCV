@@ -28,3 +28,17 @@ bool FeatureRenderer::processImage(cv::Mat& img, const FeatureList& inFeatures)
 
     return true;
 }
+
+bool FeatureRenderer::processImage(cv::Mat& img, const std::vector<cv::Point>& inFeatures)
+{
+    const cv::Scalar colour = cv::Scalar(255, 0, 0);
+    const uint32_t radius = 5;
+
+    for (uint32_t i = 0; i < inFeatures.size(); i++) {
+        cv::Point feat = inFeatures[i];
+
+        cv::circle(img, feat, radius, colour);
+    }
+
+    return true;
+}

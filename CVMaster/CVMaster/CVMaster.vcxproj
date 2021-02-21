@@ -162,6 +162,8 @@
     <ClCompile Include="sobelfilter.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CCA.h" />
+    <ClInclude Include="saddlePointDetector.h" />
     <ClInclude Include="include\checkerboard.h" />
     <ClInclude Include="include\checkerboarddetector.h" />
     <ClInclude Include="include\display.h" />

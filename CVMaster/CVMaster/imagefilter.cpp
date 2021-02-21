@@ -15,7 +15,7 @@
  *  @brief Default constructor
  *
  */
-ImageFilter::ImageFilter() : gaussianMatrix(), oldSd(-1.0F)
+ImageFilter::ImageFilter()
 {
 
 }

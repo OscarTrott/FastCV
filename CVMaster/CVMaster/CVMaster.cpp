@@ -9,6 +9,8 @@
 #include "checkerboarddetector.h"
 #include "localIntensityDimming.h"
 #include "postProcessing.h"
+#include "saddlePointDetector.h"
+#include "CCA.h"
 
 #include <iostream>
 #include <string>
@@ -37,28 +39,53 @@ int main(int argc, char** argv)
     Mat greyImage = Mat(image.size(), CV_8UC1);
     cv::cvtColor(image, greyImage, COLOR_RGB2GRAY);
 #ifdef NDEBUG
-    resize(greyImage, greyImage, Size(1296, 968));//Size(640, 480));//
+    resize(greyImage, greyImage, Size(1296, 968));
 #else
-    resize(greyImage, greyImage, Size(1296, 968));//Size(640, 480));
+    resize(greyImage, greyImage, Size(1296, 968));
 #endif // NDEBUG
 
     SobelFilter sobel;
 
     cv::Mat grad = sobel.computeGrad<uint8_t>(greyImage);
-
-    Display::showImg(grad);
-
-    const float32_t thresh = 30.0F;
+    
+    const float32_t thresh = 20.0F;
 
     grad = sobel.threshold<uint8_t>(grad, thresh);
 
-    Display::showImg(grad);
+    grad = PostProcessing::removeSingles(grad);
 
     grad = PostProcessing::fillGaps(grad);
 
+    grad = PostProcessing::thin(grad);
+
+    cv::Mat saddleResponse = cv::Mat(greyImage.size(), CV_8UC1);
+    cv::Mat clusteredSaddlePoints = cv::Mat(greyImage.size(), CV_8UC1);
+
+    std::vector<cv::Point> saddlePoints = SaddlePoint::find(grad, saddleResponse, clusteredSaddlePoints);
+
+    cv::Mat featureImage = greyImage.clone();
+
+    FeatureRenderer::processImage(featureImage, saddlePoints);
+
+    Display::showImg(featureImage);
+    
     Display::showImg(grad);
 
+    std::vector<cv::Mat> components = cca::findComponents(grad);
 
+    std::vector<Checkerboard> checkerboards;
+
+    for (const cv::Mat& m : components)
+    {
+        Checkerboard c = SaddlePoint::createCheckerboards(m, saddleResponse);
+
+        if (c.isValid())
+            checkerboards.push_back(c);
+
+        Display::showImg(m);
+    }
+
+    // DO THE CALIBRATION, FFS!
 
     return 0;
 }

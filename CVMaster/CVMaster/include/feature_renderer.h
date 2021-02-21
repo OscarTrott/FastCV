@@ -43,6 +43,13 @@ public:
      *  @param[in,out] img The image to apply the rendering to
      */
     bool processImage(cv::Mat& img, const FeatureList& inFeatures);
+
+    /**
+     *  @brief Processes the image in some way
+     *
+     *  @param[in,out] img The image to apply the rendering to
+     */
+    static bool processImage(cv::Mat& img, const std::vector<cv::Point>& inFeatures);
 };
 
 #endif // IFEATUREDETECTOR

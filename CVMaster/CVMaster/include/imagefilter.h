@@ -43,42 +43,38 @@ public:
      *  @return True if the filtering was performed successfully, false otherwise
      */
     template <typename dType>
-    bool gaussianFilter(cv::Mat& img, const float32_t sd)
+    static cv::Mat gaussianFilter(cv::Mat& img, const float32_t sd)
     {
         if (sd == 0)
         {
-            return false;
+            return img;
         }
 
         cv::Point p1 = cv::Point();
 
         // Calculate a new gaussian matrix if one has not yet been computed for this standard deviation
-        if (sd != oldSd)
+
+        const float64_t pi = 2 * acos(0.0);
+
+        const uint32_t binCount = static_cast<uint32_t>(6.0F * sd) % 2U == 0U ? static_cast<uint32_t>(6.0F * sd) + 1U : static_cast<uint32_t>(6.0F * sd);
+
+        cv::Mat gaussianMatrix = cv::Mat(static_cast<uint32_t>(binCount), static_cast<uint32_t>(binCount), CV_32FC1);
+
+        // Compute guassian matrix
+        for (uint32_t y = 0; y < binCount; y++)
         {
-            const float64_t pi = 2 * acos(0.0);
-
-            const uint32_t binCount = static_cast<uint32_t>(6.0F * sd) % 2U == 0U ? static_cast<uint32_t>(6.0F * sd) + 1U : static_cast<uint32_t>(6.0F * sd);
-
-            gaussianMatrix = cv::Mat(static_cast<uint32_t>(binCount), static_cast<uint32_t>(binCount), CV_32FC1);
-
-            // Compute guassian matrix
-            for (uint32_t y = 0; y < binCount; y++)
+            for (uint32_t x = 0; x < binCount; x++)
             {
-                for (uint32_t x = 0; x < binCount; x++)
-                {
-                    const int32_t dx = x - binCount / 2U;
-                    const int32_t dy = y - binCount / 2U;
+                const int32_t dx = x - binCount / 2U;
+                const int32_t dy = y - binCount / 2U;
 
-                    const float32_t val = std::exp(-((std::pow(dx, 2.0F) + std::pow(dy, 2.0F)) / (2.0F * std::powf(sd, 2.0F)))) * 1.0F / (2.0F * pi * std::powf(sd, 2.0));
+                const float32_t val = std::exp(-((std::pow(dx, 2.0F) + std::pow(dy, 2.0F)) / (2.0F * std::powf(sd, 2.0F)))) * 1.0F / (2.0F * pi * std::powf(sd, 2.0));
 
-                    p1.x = x;
-                    p1.y = y;
+                p1.x = x;
+                p1.y = y;
 
-                    gaussianMatrix.at<float32_t>(p1) = val;
-                }
+                gaussianMatrix.at<float32_t>(p1) = val;
             }
-
-            oldSd = sd;
         }
 
         const cv::Size& imSize = img.size();
@@ -121,14 +117,8 @@ public:
             }
         }
 
-        img = outImg.clone();
-        return true;
+        return outImg;
     }
-
-
-private:
-    cv::Mat gaussianMatrix;
-    float32_t oldSd;
 };
 
 #endif // IMAGEFILTER

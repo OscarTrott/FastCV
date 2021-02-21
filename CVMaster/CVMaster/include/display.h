@@ -32,6 +32,8 @@ namespace Display
         // Convert the data if it is not already in 0-255 range
         rendering.convertTo(rendering, CV_8UC1, 255.0 / max);
 
+        //resize(rendering, rendering, cv::Size(800, 800));//Size(640, 480));
+
         cv::namedWindow(winNameOutput);
         cv::imshow(winNameOutput, rendering);
 
