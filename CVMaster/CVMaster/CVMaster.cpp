@@ -26,8 +26,9 @@ const char* corners_window = "Corners detected";
 
 int main(int argc, char** argv)
 {
+
     // Read the image file
-    const Mat image = imread("C:/Dev/Data/Images/Calibration/Tellak/1.png");
+    const Mat image = imread("C:/Dev/Data/Images/Calibration/Tellak/7.png");
 
     if (image.empty()) // Check for failure
     {
@@ -80,7 +81,28 @@ int main(int argc, char** argv)
         Checkerboard c = SaddlePoint::createCheckerboards(m, saddleResponse);
 
         if (c.isValid())
+        {
             checkerboards.push_back(c);
+
+            cv::Mat checkerboardRender = image.clone();
+            resize(checkerboardRender, checkerboardRender, Size(1296, 968));
+
+            for (int i = 0; i < c.getWidth(); i++)
+            {
+                for (int j = 0; j < c.getHeight(); j++)
+                {
+                    const Feature& f = c[j][i];
+                    cv::circle(checkerboardRender, cv::Point(f.x, f.y), 3, cv::Scalar(0, 0, 255));
+
+                    string text = to_string(i) + ", " + to_string(j);
+
+                    cv::putText(checkerboardRender, text, cv::Point(f.x, f.y), FONT_HERSHEY_PLAIN, 0.6, cv::Scalar(0,255,0));
+                }
+            }
+
+            cv::imshow("Result", checkerboardRender);
+            cv::waitKey(0);
+        }
 
         Display::showImg(m);
     }

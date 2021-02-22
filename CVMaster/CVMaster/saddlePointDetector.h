@@ -26,7 +26,7 @@ namespace SaddlePoint {
                     for (int dx = -1; dx < 2; dx++)
                         sum += in.at<uint8_t>(cv::Point(x + dx, y + dy));
 
-                if (sum > 3)
+                if (sum > 4)
                     out.at<uint8_t>(p) = 1;
                 else
                     out.at<uint8_t>(p) = 0;
@@ -161,24 +161,52 @@ namespace SaddlePoint {
 
     }
 
-    enum direction {
-        up,
-        down,
-        left,
-        right
-    };
+    static bool isCornerInArea(cv::Mat& points, cv::Point& startingPoint, cv::Point& vec, const int windowSize = 3)
+    {
+        cv::Point nextPoint = startingPoint + vec;
+
+        cv::Size imSize = points.size();
+
+        for (int dx = -windowSize; dx < windowSize + 1; dx++)
+        {
+            for (int dy = -windowSize; dy < windowSize + 1; dy++)
+            {
+                const cv::Point dPoint = cv::Point(nextPoint.x + dx, nextPoint.y + dy);
+
+                cv::Mat render = points.clone();
+
+                cv::circle(render, startingPoint, 2, cv::Scalar(1));
+
+                cv::circle(render, dPoint, 2, cv::Scalar(1));
+
+                //Display::showImg(render, "Rendering");
+
+                if (dPoint.x < 0 || dPoint.y < 0 || dPoint.x >= imSize.width || dPoint.y >= imSize.height)
+                    continue;
+
+                if (points.at<uint8_t>(dPoint) == 1)
+                {
+                    points.at<uint8_t>(dPoint) = 0; // Clear the point so we don't use it again
+
+                    vec = dPoint - startingPoint;
+                    startingPoint = dPoint;
+
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
 
     static Checkerboard createCheckerboards(const cv::Mat& centerline, const cv::Mat& saddlePoints)
     {
         cv::Mat visited = centerline.clone();
 
         cv::Size imSize = centerline.size();
+
         cv::Mat validSaddlePoints = cv::Mat(imSize, CV_8UC1);
         validSaddlePoints = 0;
-
-        std::queue<cv::Point> nextNodes;
-        std::queue<direction> traversedDirection;
-        std::queue<cv::Point> prevCheckerboardLocation;
 
         cv::Point p = cv::Point();
 
@@ -190,12 +218,6 @@ namespace SaddlePoint {
                 p.x = x;
                 p.y = y;
 
-                if (centerline.at<uint8_t>(p) == 1 && nextNodes.size() == 0)
-                {
-                    nextNodes.push(p);
-                    traversedDirection.push(direction::down);
-                    prevCheckerboardLocation.push(cv::Point(100, 100)); // 100,100 such that we should never go in to a negative position, does this matter?
-                }
                 if (centerline.at<uint8_t>(p) == 1 && saddlePoints.at<uint8_t>(p) == 1)
                 {
                     validSaddlePoints.at<uint8_t>(p) = 1;
@@ -205,78 +227,122 @@ namespace SaddlePoint {
 
         validSaddlePoints = cluster(validSaddlePoints);
 
+        // Find the first point in the centerline from the top-left
+        for (int32_t y = 0; y < imSize.height; y++)
+        {
+            for (int32_t x = 0; x < imSize.width; x++)
+            {
+                p.x = x;
+                p.y = y;
+
+                if (centerline.at<uint8_t>(p) == 1 && validSaddlePoints.at<uint8_t>(p) == 1)
+                {
+                    validSaddlePoints.at<uint8_t>(p) = 1;
+                }
+            }
+        }
+
         Display::showImg(validSaddlePoints);
 
         Checkerboard checkerboard = Checkerboard();
+        
+        int currX = 0;
+        int currY = 0;
 
-        // Traverse the graph
-        while (nextNodes.size() != 0)
+        int pointsAdded = 0;
+
+        cv::Point xVector = {};
+        cv::Point yVector = {};
+
+        int maxRowLength = 0;
+
+        // Find the first point and add it to the checkerboard
+        for (int32_t y = 0; y < imSize.height; y++)
         {
-            const cv::Point currPoint = nextNodes.front();
-            const direction prevDirection = traversedDirection.front();
-            const cv::Point currCheckerboardLocation = prevCheckerboardLocation.front();
-            nextNodes.pop();
-            traversedDirection.pop();
-            prevCheckerboardLocation.pop();
-
-            if (visited.at<uint8_t>(currPoint) == 1) // Only add the surrounding points if the current node has not been visited yet
+            for (int32_t x = 0; x < imSize.width; x++)
             {
-                // Add the next points to the queue
-                for (int dy = -1; dy < 2; dy++)
+                p.x = x;
+                p.y = y;
+
+                // Only do something at saddle points
+                if (validSaddlePoints.at<uint8_t>(p) == 1)
                 {
-                    for (int dx = -1; dx < 2; dx++)
+                    if (pointsAdded == 1)
                     {
-                        if (dx == 0 && dy == 0)
-                            continue;
+                        const int dx = x - checkerboard[currY][currX - 1].x;
+                        const int dy = y - checkerboard[currY][currX - 1].y;
 
-                        cv::Point next = cv::Point(currPoint.x + dx, currPoint.y + dy);
-
-                        if (!(next.x > 0 && next.y > 0 && next.x < imSize.width && next.y < imSize.height))
-                            continue;
-
-                        // Get the next points from the original centerline image as we want to traverse intersections pixels multiple times
-                        const int old = centerline.at<uint8_t>(next);
-
-                        if (old == 1)
+                        if (abs(dx) > 40 || abs(dy) > 40)
                         {
-                            nextNodes.push(currPoint);
-                            
-                            // Get the previous direction
-                            if (dy < 1 && dx == -1)
-                            {
-                                traversedDirection.push(direction::left);
-                            }
-                            else if (dy == 1 && dx < 1)
-                            {
-                                traversedDirection.push(direction::down);
-                            }
-                            else if (dy == -1 && dx > -1)
-                            {
-                                traversedDirection.push(direction::up);
-                            }
-                            else
-                            {
-                                traversedDirection.push(direction::right);
-                            }
+                            // Outlier
+                            currX = 0;
+                            pointsAdded = 0;
 
-                            currCheckerboardLocation.push();
                         }
                     }
+
+                    // Add the point to the top-left of the checkerboard array
+                    if (pointsAdded == 0)
+                    {
+                        checkerboard[0][0] = Feature(x, y);
+                        currX++; // Next point, no matter the direction, is put at the next x position
+                        pointsAdded++;
+                    }
+                    else if (currX == 0) // There are previous rows but this is the first of the next
+                    {
+                        checkerboard[currY][currX] = Feature(x, y);
+
+                        const int dx = x - checkerboard[currY - 1][currX].x;
+                        const int dy = y - checkerboard[currY - 1][currX].y;
+
+                        currX++;
+                        pointsAdded++;
+                    }
+                    else if (currX == 1)
+                    {
+                        checkerboard[currY][currX] = Feature(x, y);
+
+                        const int dx = x - checkerboard[currY][currX - 1].x;
+                        const int dy = y - checkerboard[currY][currX - 1].y;
+
+                        currX++;
+                        pointsAdded++;
+
+                        // Form the x vector
+                        xVector = cv::Point(dx, dy);
+
+                        // Keep adding points to the current row, until none are found
+                        while (isCornerInArea(validSaddlePoints, p, xVector))
+                        {
+                            checkerboard[currY][currX++] = Feature(p.x, p.y);
+                            pointsAdded++;
+                        }
+
+                        // There should be at least 3 consecutive points on the checkerboard row to be valid
+                        if ((currX < 4 && currY < 2) || (dx > 50 || dy > 50))
+                        {
+                            checkerboard.setIsValid(false);
+                            return checkerboard;
+                        }
+
+                        maxRowLength = std::max(maxRowLength, currX);
+                        
+                        currX = 0;
+                        currY++;
+                    }
+                    else
+                    {
+                        // Huh, bugger
+                    }
                 }
-
-                visited.at<uint8_t>(currPoint) = 0; // Set the current pixel as having been visited
             }
-            else
-            {
-                // We should be at an intersection
-
-                if (validSaddlePoints.at<uint8_t>(currPoint) == 1)
-                {
-
-                }
-            }
-            // Check if the point is on a 
         }
+
+        // Set if the checkerboard seems to be valid
+        checkerboard.setIsValid(pointsAdded > 20 && maxRowLength > 5 && currY > 5);
+
+        checkerboard.setHeight(currY);
+        checkerboard.setWidth(maxRowLength);
 
         return checkerboard;
     }
