@@ -35,6 +35,7 @@ namespace Display
         //resize(rendering, rendering, cv::Size(800, 800));//Size(640, 480));
 
         cv::namedWindow(winNameOutput);
+        cv::imwrite("out.png", rendering);
         cv::imshow(winNameOutput, rendering);
 
         if (doWait)

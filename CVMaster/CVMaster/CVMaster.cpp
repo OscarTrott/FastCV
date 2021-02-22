@@ -26,9 +26,27 @@ const char* corners_window = "Corners detected";
 
 int main(int argc, char** argv)
 {
+    /*
+    cv::Mat in = cv::Mat(cv::Size(4,4), CV_8UC1);
+    in = 0;
 
+    in.at<uint8_t>(cv::Point(1,0)) = 1;
+    in.at<uint8_t>(cv::Point(1,1)) = 1;
+    in.at<uint8_t>(cv::Point(2,1)) = 1;
+    in.at<uint8_t>(cv::Point(3,1)) = 1;
+    in.at<uint8_t>(cv::Point(0,2)) = 1;
+    in.at<uint8_t>(cv::Point(1,2)) = 1;
+    in.at<uint8_t>(cv::Point(2,2)) = 1;
+    in.at<uint8_t>(cv::Point(2,3)) = 1;
+
+    Display::showImg(in);
+
+    PostProcessing::thin(in);
+
+    return 1;
+    */
     // Read the image file
-    const Mat image = imread("C:/Dev/Data/Images/Calibration/Tellak/7.png");
+    const Mat image = imread("C:/Dev/Data/Images/Calibration/Tellak/1.png");
 
     if (image.empty()) // Check for failure
     {
@@ -39,11 +57,21 @@ int main(int argc, char** argv)
 
     Mat greyImage = Mat(image.size(), CV_8UC1);
     cv::cvtColor(image, greyImage, COLOR_RGB2GRAY);
+
+    float xFac = 1.0F;
+    float yFac = 1.0F;
+
 #ifdef NDEBUG
+    xFac = image.size().width / 1296;
+    yFac = image.size().height / 968;
     resize(greyImage, greyImage, Size(1296, 968));
 #else
+    xFac = image.size().width / 1296;
+    yFac = image.size().height / 968;
     resize(greyImage, greyImage, Size(1296, 968));
 #endif // NDEBUG
+
+    cv::Rect roi = cv::Rect(365,580,20,20);
 
     SobelFilter sobel;
 
@@ -56,6 +84,8 @@ int main(int argc, char** argv)
     grad = PostProcessing::removeSingles(grad);
 
     grad = PostProcessing::fillGaps(grad);
+
+    //grad = grad(roi);
 
     grad = PostProcessing::thin(grad);
 
@@ -85,18 +115,22 @@ int main(int argc, char** argv)
             checkerboards.push_back(c);
 
             cv::Mat checkerboardRender = image.clone();
-            resize(checkerboardRender, checkerboardRender, Size(1296, 968));
+            //resize(checkerboardRender, checkerboardRender, Size(1296, 968));
 
             for (int i = 0; i < c.getWidth(); i++)
             {
                 for (int j = 0; j < c.getHeight(); j++)
                 {
-                    const Feature& f = c[j][i];
+                    Feature& f = c[j][i];
+                    
+                    f.x *= xFac;
+                    f.y *= yFac;
+
                     cv::circle(checkerboardRender, cv::Point(f.x, f.y), 3, cv::Scalar(0, 0, 255));
 
-                    string text = to_string(i) + ", " + to_string(j);
+                    string text = to_string(i) + "," + to_string(j);
 
-                    cv::putText(checkerboardRender, text, cv::Point(f.x, f.y), FONT_HERSHEY_PLAIN, 0.6, cv::Scalar(0,255,0));
+                    cv::putText(checkerboardRender, text, cv::Point(f.x, f.y), FONT_HERSHEY_PLAIN, 1.5, cv::Scalar(0,255,0));
                 }
             }
 

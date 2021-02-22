@@ -144,15 +144,15 @@ public:
     {
         int sum = 0;
 
-        for (unsigned char i = 0; i < 8; i++)
+        for (int i = 0; i < 8; i++)
         {
             sum += cells[i];
         }
 
-        for (unsigned char i = 1; i < 8; i += 2)
+        for (int i = 1; i < 8; i += 2)
         {
             // Check for duplicate point
-            if (cells[i] == 1 && cells[(i - 1) % 8] == 1 && cells[(i - 2) % 8] == 0 && cells[(i - 3) % 8] == 1 && sum == 3)
+            if (cells[i] == 1 && cells[(8 + i - 1) % 8] == 1 && cells[(8 + i - 2) % 8] == 0 && cells[(8 + i - 3) % 8] == 1 && sum == 3)
             {
                 return true;
             }
@@ -192,9 +192,9 @@ public:
             for (int iteration = 0; iteration < 2; iteration++)
             {
                 // Iterate over all points in the image
-                for (int32_t y = 0; y < imSize.height; y++)
+                for (int32_t y = 1; y < imSize.height - 1; y++)
                 {
-                    for (int32_t x = 0; x < imSize.width; x++)
+                    for (int32_t x = 1; x < imSize.width - 1; x++)
                     {
                         // Get the current position
                         p.x = x;
@@ -232,6 +232,22 @@ public:
                         p.x = x;
                         p.y = y;
 
+                        const int tX = -1, tY = -1;
+
+                        if (x == tX && y == tY)
+                        {
+                            std::cout << p.x << " " << p.y << " " << weight << " ";
+                            for (int i = 0; i < 8; i++)
+                                std::cout << cellValues[i] << " ";
+                            std::cout << transitionCount(cellValues);
+                            std::cout << "\n";
+
+                            cv::Mat o = cv::Mat(imSize, CV_8UC1);
+                            o = 0;
+                            o.at<uint8_t>(cv::Point(x, y)) = 1;
+                            Display::showImg(o, "thinning help");
+                        }
+
                         if (weight >= 2 && weight <= 6 &&
                             (cellValues[0] == 0 || cellValues[2] == 0 || cellValues[4] == 0) &&
                             (cellValues[2] == 0 || cellValues[4] == 0 || cellValues[6] == 0) &&
@@ -239,6 +255,8 @@ public:
                             iteration == 0
                             )
                         {
+                            if (x == tX && y == tY)
+                            std::cout << "removed1\n";
                             out.at<uint8_t>(p) = 0;
                             changed = true;
                         }
@@ -249,12 +267,16 @@ public:
                             iteration == 1
                             )
                         {
+                            if (x == tX && y == tY)
+                            std::cout << "removed2\n";
                             out.at<uint8_t>(p) = 0;
                             changed = true;
                         }
                         
                         if (weight >= 2 && weight <= 6 && checkDuplicatePoint(cellValues))
                         {
+                            if (x == tX && y == tY)
+                            std::cout << "removed3\n";
                             out.at<uint8_t>(p) = 0;
                             interim.at<uint8_t>(p) = 0; // Has to happen otherwise we'll remove all duplicate points instead of just one
                             changed = true;
@@ -264,6 +286,8 @@ public:
 
                 // Have a copy so we're not changing the scene on each pixel which could affect the next pixel
                 interim = out.clone();
+
+                Display::showImg(out, "thinning");
             }
         }
 
