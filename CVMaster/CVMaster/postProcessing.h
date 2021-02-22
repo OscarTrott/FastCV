@@ -84,13 +84,13 @@ public:
                 p.x = x;
                 p.y = y;
 
-                if (y == 0 || x == 0 || y == imSize.height - 1 || x == imSize.width - 1)
+                const uint8_t val = in.at<uint8_t>(p);
+
+                if (y == 0 || x == 0 || y == imSize.height - 1 || x == imSize.width - 1 || val == 0)
                 {
                     out.at<uint8_t>(p) = 0;
                     continue;
                 }
-
-                const uint8_t val = in.at<uint8_t>(p);
 
                 int sum = 0;
 
@@ -109,7 +109,7 @@ public:
                 p.x = x;
                 p.y = y;
 
-                if (sum > 3)
+                if (sum > 1)
                 {
                     out.at<uint8_t>(p) = 1;
                 }
@@ -245,10 +245,39 @@ public:
                             cv::Mat o = cv::Mat(imSize, CV_8UC1);
                             o = 0;
                             o.at<uint8_t>(cv::Point(x, y)) = 1;
-                            Display::showImg(o, "thinning help");
                         }
+                        /*
+                        if (weight < 2)
+                        {
+                            // Point is singular or
+                            // Remove the point 
 
-                        if (weight >= 2 && weight <= 6 &&
+                            std::queue<cv::Point> nextPoint = {};
+
+                            nextPoint.push(p);
+                            out.at<uint8_t>(p) = 0;
+
+                            while (nextPoint.size() != 0)
+                            {
+                                const cv::Point& currPoint = nextPoint.front();
+                                nextPoint.pop();
+
+                                // Append adjacent points (should only be a max of 1)
+                                for (int dy = -1; dy < 2; dy++)
+                                    for (int dx = -1; dx < 2; dx++)
+                                        if (dx != 0 && dy != 0 &&
+                                            currPoint.x + dx > 0 && currPoint.x + dx < imSize.width && 
+                                            currPoint.y + dy > 0 && currPoint.y + dy < imSize.height &&
+                                            out.at<uint8_t>(cv::Point(currPoint.x + dx, currPoint.y + dy)) == 1)
+                                        {
+                                            nextPoint.push(cv::Point(currPoint.x + dx, currPoint.y + dy));
+                                            out.at<uint8_t>(cv::Point(currPoint.x + dx, currPoint.y + dy)) = 0;
+                                        }
+                            }
+
+                        }
+                        */
+                        if (weight < 6 &&
                             (cellValues[0] == 0 || cellValues[2] == 0 || cellValues[4] == 0) &&
                             (cellValues[2] == 0 || cellValues[4] == 0 || cellValues[6] == 0) &&
                             (transitionCount(cellValues) == 1) &&
@@ -260,7 +289,7 @@ public:
                             out.at<uint8_t>(p) = 0;
                             changed = true;
                         }
-                        else if (weight >= 2 && weight <= 6 &&
+                        else if (weight < 6 &&
                             (cellValues[0] == 0 || cellValues[2] == 0 || cellValues[6] == 0) &&
                             (cellValues[0] == 0 || cellValues[4] == 0 || cellValues[6] == 0) &&
                             transitionCount(cellValues) == 1 &&
@@ -273,7 +302,7 @@ public:
                             changed = true;
                         }
                         
-                        if (weight >= 2 && weight <= 6 && checkDuplicatePoint(cellValues))
+                        if (weight <= 6 && checkDuplicatePoint(cellValues))
                         {
                             if (x == tX && y == tY)
                             std::cout << "removed3\n";
@@ -287,7 +316,20 @@ public:
                 // Have a copy so we're not changing the scene on each pixel which could affect the next pixel
                 interim = out.clone();
 
-                Display::showImg(out, "thinning");
+            }
+        }
+
+        // Refine the corners
+        for (int32_t y = 1; y < imSize.height - 1; y++)
+        {
+            for (int32_t x = 1; x < imSize.width - 1; x++)
+            {
+                // Get the current position
+                p.x = x;
+                p.y = y;
+
+
+
             }
         }
 

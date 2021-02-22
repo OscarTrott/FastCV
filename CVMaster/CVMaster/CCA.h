@@ -68,7 +68,7 @@ namespace cca {
                         }
                     }
 
-                    if (size > 600)
+                    if (size > 1000)
                     {
                         out.push_back(newComponent);
                     }

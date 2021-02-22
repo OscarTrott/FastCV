@@ -26,25 +26,6 @@ const char* corners_window = "Corners detected";
 
 int main(int argc, char** argv)
 {
-    /*
-    cv::Mat in = cv::Mat(cv::Size(4,4), CV_8UC1);
-    in = 0;
-
-    in.at<uint8_t>(cv::Point(1,0)) = 1;
-    in.at<uint8_t>(cv::Point(1,1)) = 1;
-    in.at<uint8_t>(cv::Point(2,1)) = 1;
-    in.at<uint8_t>(cv::Point(3,1)) = 1;
-    in.at<uint8_t>(cv::Point(0,2)) = 1;
-    in.at<uint8_t>(cv::Point(1,2)) = 1;
-    in.at<uint8_t>(cv::Point(2,2)) = 1;
-    in.at<uint8_t>(cv::Point(2,3)) = 1;
-
-    Display::showImg(in);
-
-    PostProcessing::thin(in);
-
-    return 1;
-    */
     // Read the image file
     const Mat image = imread("C:/Dev/Data/Images/Calibration/Tellak/1.png");
 
@@ -62,16 +43,19 @@ int main(int argc, char** argv)
     float yFac = 1.0F;
 
 #ifdef NDEBUG
-    xFac = image.size().width / 1296;
-    yFac = image.size().height / 968;
-    resize(greyImage, greyImage, Size(1296, 968));
+    //xFac = image.size().width / 1296;
+    //yFac = image.size().height / 968;
+    //resize(greyImage, greyImage, Size(1296, 968));
 #else
     xFac = image.size().width / 1296;
     yFac = image.size().height / 968;
     resize(greyImage, greyImage, Size(1296, 968));
 #endif // NDEBUG
 
-    cv::Rect roi = cv::Rect(365,580,20,20);
+    cv::Rect roi = cv::Rect(630, 180, 340, 240);
+    //cv::rectangle(greyImage, roi, cv::Scalar(255));
+    //
+    //Display::showImg(greyImage);
 
     SobelFilter sobel;
 
@@ -84,10 +68,10 @@ int main(int argc, char** argv)
     grad = PostProcessing::removeSingles(grad);
 
     grad = PostProcessing::fillGaps(grad);
-
     //grad = grad(roi);
-
     grad = PostProcessing::thin(grad);
+
+    grad = PostProcessing::removeSingles(grad);
 
     cv::Mat saddleResponse = cv::Mat(greyImage.size(), CV_8UC1);
     cv::Mat clusteredSaddlePoints = cv::Mat(greyImage.size(), CV_8UC1);
@@ -108,7 +92,7 @@ int main(int argc, char** argv)
 
     for (const cv::Mat& m : components)
     {
-        Checkerboard c = SaddlePoint::createCheckerboards(m, saddleResponse);
+        Checkerboard c = SaddlePoint::createCheckerboards(m, clusteredSaddlePoints);
 
         if (c.isValid())
         {

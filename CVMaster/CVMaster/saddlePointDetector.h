@@ -36,7 +36,50 @@ namespace SaddlePoint {
         return out;
     }
 
-    static cv::Mat cluster(const cv::Mat& in, const int maxDist = 8)
+    static void findClosestValidPoint(int& x, int& y, const cv::Mat& validPoints, bool plot)
+    {
+        if (plot)
+        Display::showImg(validPoints, "valid points");
+
+        const cv::Size imSize = validPoints.size();
+
+        cv::Point p = cv::Point();
+
+        int maxRadius = 10;
+
+        for (int radius = 0; radius < maxRadius; radius++)
+        for (int dy = -radius; dy < radius + 1; dy++)
+        {
+            for (int dx = -radius; dx < radius + 1; dx++)
+            {
+                float dist = std::sqrt(std::pow(dy,2) + std::pow(dx, 2));
+
+                if (static_cast<int>(dy) == radius || static_cast<int>(dx) == radius)
+                {
+                    if (dx + x > 0 && dy + y > 0 && dx + x < imSize.width && dy + y < imSize.height)
+                    {
+                        p.x = dx + x;
+                        p.y = dy + y;
+
+                        cv::Mat pPoint = cv::Mat(imSize, CV_8UC1);
+                        pPoint = 0;
+                        pPoint.at<uint8_t>(p) = 1;
+                        if (plot)
+                        Display::showImg(pPoint, "Purported point");
+
+                        if (validPoints.at<uint8_t>(p) == 1)
+                        {
+                            x = p.x;
+                            y = p.y;
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    static cv::Mat cluster(const cv::Mat& in, const cv::Mat& validPositions, bool plot, const int maxDist = 8)
     {
         cv::Size imSize = in.size();
 
@@ -57,7 +100,9 @@ namespace SaddlePoint {
 
                     bool clusterMoved = true;
 
-                    while (clusterMoved)
+                    int iterationCount = 0;
+
+                    while (clusterMoved && iterationCount++ < 5)
                     {
                         int points = 0;
 
@@ -82,6 +127,11 @@ namespace SaddlePoint {
 
                         xAv /= points;
                         yAv /= points;
+
+                        findClosestValidPoint(xAv, yAv, validPositions, plot);
+
+                        if (plot)
+                            std::cout << std::to_string(validPositions.at<uint8_t>(cv::Point(xAv, yAv))) << "\n";
 
                         clusterMoved = (xAv != center.x) || (yAv != center.y);
 
@@ -225,7 +275,7 @@ namespace SaddlePoint {
             }
         }
 
-        validSaddlePoints = cluster(validSaddlePoints);
+        validSaddlePoints = cluster(validSaddlePoints, centerline, false);
 
         // Find the first point in the centerline from the top-left
         for (int32_t y = 0; y < imSize.height; y++)
@@ -242,8 +292,6 @@ namespace SaddlePoint {
             }
         }
 
-        Display::showImg(validSaddlePoints);
-
         Checkerboard checkerboard = Checkerboard();
         
         int currX = 0;
@@ -256,93 +304,98 @@ namespace SaddlePoint {
 
         int maxRowLength = 0;
 
-        // Find the first point and add it to the checkerboard
-        for (int32_t y = 0; y < imSize.height; y++)
+        while (!checkerboard.isValid())
         {
-            for (int32_t x = 0; x < imSize.width; x++)
+            // Find the first point and add it to the checkerboard
+            for (int32_t y = 0; y < imSize.height; y++)
             {
-                p.x = x;
-                p.y = y;
-
-                // Only do something at saddle points
-                if (validSaddlePoints.at<uint8_t>(p) == 1)
+                for (int32_t x = 0; x < imSize.width; x++)
                 {
-                    if (pointsAdded == 1)
+                    p.x = x;
+                    p.y = y;
+
+                    // Only do something at saddle points
+                    if (validSaddlePoints.at<uint8_t>(p) == 1)
                     {
-                        const int dx = x - checkerboard[currY][currX - 1].x;
-                        const int dy = y - checkerboard[currY][currX - 1].y;
+                        cv::Mat ren = cv::Mat(imSize, CV_8UC1);
+                        ren = 0;
+                        ren.at<uint8_t>(p) = 1;
 
-                        if (abs(dx) > 40 || abs(dy) > 40)
+                        if (pointsAdded == 1)
                         {
-                            // Outlier
-                            currX = 0;
-                            pointsAdded = 0;
+                            const int dx = x - checkerboard[currY][currX - 1].x;
+                            const int dy = y - checkerboard[currY][currX - 1].y;
 
+                            if (abs(dx) > 40 || abs(dy) > 40)
+                            {
+                                // Outlier, try again from current position
+                                continue;
+                            }
                         }
-                    }
 
-                    // Add the point to the top-left of the checkerboard array
-                    if (pointsAdded == 0)
-                    {
-                        checkerboard[0][0] = Feature(x, y);
-                        currX++; // Next point, no matter the direction, is put at the next x position
-                        pointsAdded++;
-                    }
-                    else if (currX == 0) // There are previous rows but this is the first of the next
-                    {
-                        checkerboard[currY][currX] = Feature(x, y);
-
-                        const int dx = x - checkerboard[currY - 1][currX].x;
-                        const int dy = y - checkerboard[currY - 1][currX].y;
-
-                        currX++;
-                        pointsAdded++;
-                    }
-                    else if (currX == 1)
-                    {
-                        checkerboard[currY][currX] = Feature(x, y);
-
-                        const int dx = x - checkerboard[currY][currX - 1].x;
-                        const int dy = y - checkerboard[currY][currX - 1].y;
-
-                        currX++;
-                        pointsAdded++;
-
-                        // Form the x vector
-                        xVector = cv::Point(dx, dy);
-
-                        // Keep adding points to the current row, until none are found
-                        while (isCornerInArea(validSaddlePoints, p, xVector))
+                        // Add the point to the top-left of the checkerboard array
+                        if (pointsAdded == 0)
                         {
-                            checkerboard[currY][currX++] = Feature(p.x, p.y);
+                            checkerboard[0][0] = Feature(x, y);
+                            currX++; // Next point, no matter the direction, is put at the next x position
                             pointsAdded++;
                         }
-
-                        // There should be at least 3 consecutive points on the checkerboard row to be valid
-                        if ((currX < 4 && currY < 2) || (dx > 50 || dy > 50))
+                        else if (currX == 0) // There are previous rows but this is the first of the next
                         {
-                            checkerboard.setIsValid(false);
-                            return checkerboard;
-                        }
+                            checkerboard[currY][currX] = Feature(x, y);
 
-                        maxRowLength = std::max(maxRowLength, currX);
-                        
-                        currX = 0;
-                        currY++;
-                    }
-                    else
-                    {
-                        // Huh, bugger
+                            const int dx = x - checkerboard[currY - 1][currX].x;
+                            const int dy = y - checkerboard[currY - 1][currX].y;
+
+                            currX++;
+                            pointsAdded++;
+                        }
+                        else if (currX == 1)
+                        {
+                            checkerboard[currY][currX] = Feature(x, y);
+
+                            const int dx = x - checkerboard[currY][currX - 1].x;
+                            const int dy = y - checkerboard[currY][currX - 1].y;
+
+                            currX++;
+                            pointsAdded++;
+
+                            // Form the x vector
+                            xVector = cv::Point(dx, dy);
+
+                            // Keep adding points to the current row, until none are found
+                            while (isCornerInArea(validSaddlePoints, p, xVector))
+                            {
+                                checkerboard[currY][currX++] = Feature(p.x, p.y);
+                                pointsAdded++;
+                            }
+
+                            // There should be at least 3 consecutive points on the checkerboard row to be valid
+                            if ((currX < 4 && currY < 2) || (dx > 50 || dy > 50))
+                            {
+                                checkerboard.setIsValid(false);
+                                return checkerboard;
+                            }
+
+                            maxRowLength = std::max(maxRowLength, currX);
+
+                            currX = 0;
+                            currY++;
+                        }
+                        else
+                        {
+                            // Huh, bugger
+                        }
                     }
                 }
             }
+
+            // Set if the checkerboard seems to be valid
+            checkerboard.setIsValid(pointsAdded > 20 && maxRowLength > 5 && currY > 5);
+
+            checkerboard.setHeight(currY);
+            checkerboard.setWidth(maxRowLength);
         }
-
-        // Set if the checkerboard seems to be valid
-        checkerboard.setIsValid(pointsAdded > 20 && maxRowLength > 5 && currY > 5);
-
-        checkerboard.setHeight(currY);
-        checkerboard.setWidth(maxRowLength);
 
         return checkerboard;
     }
@@ -351,11 +404,7 @@ namespace SaddlePoint {
     {
         responses = response(in);
 
-        Display::showImg(responses);
-
-        clusteredResponse = cluster(responses);
-
-        Display::showImg(clusteredResponse);
+        clusteredResponse = cluster(responses, in, false);
 
         return extract(clusteredResponse);
     }
